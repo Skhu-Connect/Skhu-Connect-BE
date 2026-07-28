@@ -34,7 +34,6 @@ SKHU Connect는 성공회대학교 학생들이 학교에 건의사항을 등록
 - Spring Boot 4
 - Spring Web MVC
 - Spring Data JPA
-- Spring Security
 - Validation
 - MySQL
 - Gradle
