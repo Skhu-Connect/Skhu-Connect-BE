@@ -46,18 +46,6 @@ SKHU Connect는 성공회대학교 학생들이 학교에 건의사항을 등록
 
 ---
 
-## 📂 Project Structure
-
-```
-src
- ├── main
- │    ├── java
- │    └── resources
- └── test
-```
-
----
-
 ## 🚀 Getting Started
 
 ### Clone
@@ -88,9 +76,3 @@ git clone https://github.com/Skhu-Connect/backend.git
 ## 👨‍💻 Team
 
 SKHU Connect Team
-
----
-
-## 📄 License
-
-This project is for educational purposes.
