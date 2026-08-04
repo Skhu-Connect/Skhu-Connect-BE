@@ -103,25 +103,11 @@ Possible target groups may include:
 - dormitory residents;
 - a specific grade or other defined student group.
 
-The exact database schema, calculation logic, threshold values, and status enum values are not confirmed yet.
+The project architecture, entity direction, and development rules follow `ARCHITECTURE.md`.
 
-Do not invent or finalize those details without approval.
+If implementation conflicts with `ARCHITECTURE.md`, report the conflict before making changes.
 
----
-
-## 5. Initial petition categories
-
-The current MVP category candidates are:
-
-- Academic and Classes
-- Scholarships and Student Welfare
-- Facilities
-- Dormitory
-- Library
-
-These categories may change after planning discussions or university feedback.
-
-Do not hard-code them permanently without confirming whether they should be enums, database records, or administrator-managed data.
+Do not invent or modify business rules, entity structures, or enums without explicit user approval.
 
 ---
 
@@ -165,15 +151,6 @@ The local MySQL schema is currently:
 
 ```text
 skhu_connect
-```
-
-The application has successfully started locally and connected to MySQL.
-
-Spring Security was removed from the initial setup and is not currently part of the active dependency set.
-
-The authentication and authorization strategy has not been finalized.
-
-Do not assume JWT, OAuth2, university SSO, school email authentication, or another authentication method has already been selected.
 
 ---
 
@@ -395,17 +372,21 @@ Before a database-related change, explain:
 - expected table changes;
 - possible effect on existing data.
 
-The current database design is not finalized.
+The database design follows `ARCHITECTURE.md` and `ERD.md` (when available).
 
-Do not finalize the ERD through implementation without user approval.
+If implementation conflicts with those documents, report the conflict before changing code.
+
+Do not modify the ERD without explicit user approval.
 
 ---
 
 ## 16. API safety
 
-The public API structure has not been finalized.
+The public API must follow the confirmed API specification and `ARCHITECTURE.md`.
 
-Do not invent permanent URLs, response envelopes, status enums, error-code formats, pagination formats, or authentication requirements unless requested or approved.
+Do not change API URLs, request/response formats, authentication rules, or business behavior without explicit approval.
+
+Do not invent new public APIs unless requested.
 
 When implementing or changing an API, report:
 
@@ -447,8 +428,9 @@ Do not print secrets or personal authentication data in logs.
 
 Do not weaken security controls merely to make a test pass.
 
-Authentication and authorization are not yet finalized, so do not introduce a security design without approval.
+Authentication and authorization follow `ARCHITECTURE.md`.
 
+Do not modify the authentication strategy, JWT policy, or authorization rules without explicit user approval.
 ---
 
 ## 18. Existing style and user work
