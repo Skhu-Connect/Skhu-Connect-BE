@@ -70,13 +70,9 @@ api/v1 형태는 사용하지 않는다.
 
 # 4. 인증 방식
 
-Spring Security 사용
+일반 사용자 인증은 Access Token과 Refresh Token을 함께 사용한다.
 
-JWT 기반 인증 사용
-
-Authentication 방식
-
-```
+```text
 Access Token
 +
 Refresh Token
@@ -84,28 +80,47 @@ Refresh Token
 
 ## Access Token
 
-- 만료시간 : 30분
+- HS256으로 서명한 JWT이다.
+- 만료시간은 30분이다.
+- `sub` claim은 User ID 문자열이다.
+- `role` claim은 `USER`이다.
+- 서명 키는 `JWT_SECRET` 환경변수에서 읽는다.
+- `JWT_SECRET`은 Base64 값이어야 하며 디코딩 결과가 최소 32바이트여야 한다.
 
-전달 방식
+전달 방식:
 
-```
+```http
 Authorization: Bearer {AccessToken}
 ```
 
 ## Refresh Token
 
-만료시간
+- `SecureRandom`으로 생성한 256비트 opaque token이다.
+- 유효기간은 14일이다.
+- 원문은 데이터베이스에 저장하지 않고 SHA-256 `token_hash`만 저장한다.
+- 사용자당 활성 Refresh Token은 최대 하나이다.
+- 로그인 시 기존 활성 토큰을 교체한다.
+- 재발급 시 기존 토큰을 회전하여 즉시 사용할 수 없게 한다.
+- 로그아웃 시 활성 토큰을 삭제한다.
+- 활성 행에서 조회되지 않는 토큰은 `TOKEN_INVALID`로 처리한다.
+- 활성 행에서 만료가 확인된 토큰은 `TOKEN_EXPIRED`로 처리한다.
+- Refresh Token 조회와 회전에는 비관적 락을 사용한다.
+- Redis는 MVP에서 사용하지 않는다.
 
-```
-14일
-```
+Cookie 정책:
 
-HttpOnly Cookie 사용
+- 이름: `refreshToken`
+- `HttpOnly`
+- `Path=/connect/auth`
+- `SameSite=Lax`
+- `Max-Age=1209600`
+- `Secure`는 `JWT_COOKIE_SECURE` 환경변수로 설정한다.
 
-RefreshToken Entity에서 관리한다.
+## 현재 보안 구현 범위
 
-Redis는 MVP에서 사용하지 않는다.
-
+- 일반 사용자 로그인·재발급·로그아웃 및 JWT 발급은 구현되어 있다.
+- JWT 지원에는 `spring-security-oauth2-jose`를 사용한다.
+- Spring Security 전체 필터 체인과 Access Token 인증 필터는 아직 구현하지 않았다.
 ## 이메일 인증 저장
 
 - 이메일 인증 상태는 기존 MySQL에 EmailVerification Entity로 저장한다.
@@ -164,6 +179,14 @@ password
 사용한다.
 
 학교 이메일은 로그인에 사용하지 않는다.
+
+구현된 일반 사용자 인증 API:
+
+```http
+POST /connect/auth/login
+POST /connect/auth/token/refresh
+POST /connect/auth/logout
+```
 
 ---
 
@@ -458,26 +481,16 @@ ThresholdSetting Entity에서 관리한다.
 
 # 19. JWT 정책
 
-Access Token
-
-```
-30분
-```
-
-Refresh Token
-
-```
-14일
-```
-
-Authorization Header 사용
-
-RefreshToken은 HttpOnly Cookie 사용
-
-RefreshToken Entity에서 관리
+- Access Token은 HS256 JWT이고 유효기간은 30분이다.
+- Access Token의 `sub`는 User ID 문자열이고 `role`은 `USER`이다.
+- Access Token은 데이터베이스에 저장하지 않는다.
+- Refresh Token은 256비트 opaque token이고 유효기간은 14일이다.
+- Refresh Token 원문 대신 SHA-256 해시를 `RefreshToken` Entity에 저장한다.
+- Refresh Token은 `refreshToken` HttpOnly Cookie로 전달한다.
+- 로그인 시 교체하고 재발급 시 회전하며 로그아웃 시 삭제한다.
+- Spring Security 전체 필터 체인과 Access Token 인증 필터는 아직 구현하지 않았다.
 
 ---
-
 # 20. 개발 원칙
 
 유지보수성을 가장 우선한다.

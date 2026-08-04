@@ -327,7 +327,7 @@ refresh_tokens
 |---|---|---:|---|---|
 | `id` | `BIGINT` | 불가 | PK, AUTO_INCREMENT | Refresh Token 식별자 |
 | `user_id` | `BIGINT` | 불가 | FK, UNIQUE | 사용자 식별자 |
-| `token` | `VARCHAR(500)` | 불가 | UNIQUE | Refresh Token 또는 토큰 식별값 |
+| `token_hash` | `VARCHAR(64)` | 불가 | UNIQUE | Refresh Token 원문의 SHA-256 해시 |
 | `expires_at` | `DATETIME(6)` | 불가 |  | 만료 시각 |
 | `created_at` | `DATETIME(6)` | 불가 |  | 발급 시각 |
 | `updated_at` | `DATETIME(6)` | 불가 |  | 재발급·갱신 시각 |
@@ -341,8 +341,8 @@ User 1 : 0..1 RefreshToken
 ## 제약조건
 
 ```text
-UNIQUE(user_id)
-UNIQUE(token)
+UNIQUE INDEX ux_refresh_tokens_user_id (user_id)
+UNIQUE INDEX ux_refresh_tokens_token_hash (token_hash)
 FOREIGN KEY(user_id) REFERENCES users(id)
 ```
 
@@ -350,9 +350,16 @@ FOREIGN KEY(user_id) REFERENCES users(id)
 
 - Access Token의 유효기간은 30분이다.
 - Refresh Token의 유효기간은 14일이다.
-- Refresh Token은 HttpOnly Cookie로 전달한다.
+- Refresh Token은 `SecureRandom`으로 생성한 256비트 opaque token이다.
+- Refresh Token 원문은 저장하지 않고 SHA-256 `token_hash`만 저장한다.
+- Refresh Token은 이름 `refreshToken`, `HttpOnly`, `Path=/connect/auth`, `SameSite=Lax`, `Max-Age=1209600`인 Cookie로 전달한다.
+- Cookie의 `Secure` 여부는 `JWT_COOKIE_SECURE` 환경변수로 설정한다.
+- 로그인 시 기존 활성 Refresh Token 행의 해시와 만료 시각을 교체한다.
+- 재발급 시 기존 토큰을 새 토큰으로 회전한다.
 - 로그아웃 시 해당 사용자의 Refresh Token을 삭제한다.
 - 사용자 한 명당 활성 Refresh Token 하나만 저장한다.
+- 활성 행에서 조회되지 않는 토큰은 `TOKEN_INVALID`로 처리한다.
+- 활성 행에서 만료가 확인된 토큰은 `TOKEN_EXPIRED`로 처리한다.
 - Redis는 MVP에서 사용하지 않는다.
 
 관리자 Refresh Token 저장 방식은 현재 확정되지 않았으므로 본 Entity에는 사용자 Token만 포함한다.
@@ -948,6 +955,13 @@ UNIQUE INDEX ux_email_verifications_token_hash (token_hash)
 UNIQUE INDEX ux_admins_login_id (login_id)
 ```
 
+## RefreshToken
+
+```text
+UNIQUE INDEX ux_refresh_tokens_user_id (user_id)
+UNIQUE INDEX ux_refresh_tokens_token_hash (token_hash)
+```
+
 ## Petition
 
 ```text
@@ -955,7 +969,7 @@ INDEX ix_petitions_status_created_at (status, created_at)
 INDEX ix_petitions_category_created_at (category, created_at)
 INDEX ix_petitions_hidden_deleted (hidden, deleted)
 INDEX ix_petitions_writer_id_created_at (writer_id, created_at)
-INDEX ix_petitions_agreement_deadline (status, agreement_deadline)
+INDEX ix_petitions_status_agreement_deadline (status, agreement_deadline)
 ```
 
 ## Agreement
@@ -1014,8 +1028,7 @@ INDEX ix_notification_logs_created_at (created_at)
 
 전체 인덱스는 실제 조회 쿼리와 실행 계획을 확인한 후 조정할 수 있다.
 
----
-
+--- 
 # 19. 삭제 및 숨김 정책
 
 ## 사용자 삭제
@@ -1102,11 +1115,12 @@ POST /connect/auth/email-verifications/confirm
 
 ## 21.2 비밀번호 재설정
 
-다음 API가 존재하지만 재설정 Token 저장 방식이 확정되지 않았다.
+비밀번호 재설정은 기존 이메일 인증 API를 `purpose=PASSWORD_RESET`으로 재사용하는 방향으로 구현한다.
 
 ```text
-POST /connect/auth/password-reset/request
-POST /connect/auth/password-reset/confirm
+POST /connect/auth/email-verifications
+POST /connect/auth/email-verifications/confirm
+POST /connect/auth/password/reset
 ```
 
 ## 21.3 관리자 Refresh Token
