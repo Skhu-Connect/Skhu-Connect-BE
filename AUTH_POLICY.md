@@ -2,9 +2,9 @@
 
 ## 1. 문서 목적
 
-이 문서는 SKHU Connect의 회원가입 전 학생 이메일 인증, 회원가입 완료 조건, 비밀번호 재설정, 로그인과 이메일 인증의 관계를 정의한다.
+이 문서는 SKHU Connect의 회원가입 전 학생 이메일 인증, 회원가입 완료 조건, 비밀번호 재설정, 일반 사용자 로그인·토큰 재발급·로그아웃 정책을 정의한다.
 
-후속 사용자 이메일 인증, 회원가입, 비밀번호 재설정, 로그인·인증, 이메일 발송 인프라 구현 Issue는 이 문서를 정책 기준으로 삼는다. 이 문서의 API 내용은 구현 방향을 맞추기 위한 초안이며, 실제 Request·Response DTO, 세부 HTTP 상태 코드 및 공통 오류 형식은 각 구현 Issue에서 확정한다.
+사용자 이메일 인증, 회원가입, 비밀번호 재설정, 로그인·인증, 이메일 발송 인프라 구현 Issue는 이 문서를 정책 기준으로 삼는다. 구현이 완료된 API는 실제 구현 결과를 따르며, 아직 구현되지 않은 API의 Request·Response DTO, 세부 HTTP 상태 코드 및 공통 오류 형식은 각 구현 Issue에서 확정한다.
 
 ## 2. 용어 정의
 
@@ -80,11 +80,11 @@
 - 프론트엔드가 전달하는 단순 boolean 값만으로 인증 완료 여부를 신뢰하지 않는다.
 - 회원가입 요청에서 서버가 관리하는 인증 식별자 또는 일회용 검증 수단을 반드시 확인한다.
 
-구체적인 전달 방식은 후속 구현 시 현재 저장 구조에 맞춰 다음 후보 중 선택한다.
+인증번호 검증 성공 시 일회용 verificationToken을 발급한다.
 
-- 일회용 `verificationToken`
-- 서버가 관리하는 `verificationId`
-- 서버 저장 상태와 이메일의 조합
+- 원문 verificationToken은 클라이언트에 한 번만 반환한다.
+- MySQL의 EmailVerification Entity에는 원문 대신 SHA-256 tokenHash를 저장한다.
+- verificationToken은 발급 시점부터 30분간 유효하고 한 번만 사용할 수 있다.
 
 장기 JWT Access Token은 회원가입 이메일 인증 수단으로 사용하지 않는다.
 
@@ -147,11 +147,9 @@
 - `SIGN_UP`: 회원가입 전 이메일 인증
 - `PASSWORD_RESET`: 비밀번호 재설정을 위한 이메일 인증
 
-Enum 또는 저장 방식은 후속 구현에서 결정한다. 정책상 목적 구분은 필수이며, 같은 이메일과 같은 인증번호라도 발급 당시와 다른 목적에는 사용할 수 없다. 인증번호, 인증 완료 상태 및 일회용 검증 수단은 모두 목적과 함께 검증한다.
-
+인증 목적은 `SIGN_UP`과 `PASSWORD_RESET` Enum으로 구분하며, EmailVerification의 `purpose` 컬럼에 문자열로 저장한다. 같은 이메일과 같은 인증번호라도 발급 당시와 다른 목적에는 사용할 수 없다. 인증번호, 인증 완료 상태 및 일회용 검증 수단은 모두 목적과 함께 검증한다.
 ## 11. API 계약 초안
-
-이번 문서에서는 Controller를 구현하지 않는다. 다음 경로는 `/connect`를 기본 경로로 사용하는 후속 구현의 API 계약 초안이다.
+다음 경로는 `/connect`를 기본 경로로 사용하는 인증 관련 API 계약이다. 구현이 완료된 API는 실제 구현 결과를 따르며, 비밀번호 재설정 API의 세부 계약은 후속 구현 Issue에서 확정한다.
 
 ### 회원가입 인증번호 발송
 
@@ -199,7 +197,7 @@ POST /connect/auth/email-verifications/confirm
 - 실패 시도 횟수 확인
 - 사용 여부와 인증 목적 확인
 - 인증 성공 상태 생성
-- 일회용 `verificationToken` 또는 `verificationId` 반환 가능
+- 일회용 verificationToken 반환
 
 ### 회원가입
 
@@ -209,12 +207,12 @@ POST /connect/auth/signup
 
 요청에 포함될 핵심 정보:
 
-- `verificationToken` 또는 `verificationId`
+- verificationToken
 - `loginId`
 - `password`
 - `departmentId`
-
-회원가입 요청에서 이메일을 다시 받을지는 인증 완료 상태 전달 방식에 따라 후속 구현에서 확정한다. 어느 방식을 선택하더라도 서버는 인증된 이메일과 회원가입 대상 이메일의 동일성을 보장해야 한다.
+  회원가입 요청은 `verificationToken`, `loginId`, `password`, `departmentId`를 전달하며, 서버는 verificationToken에 연결된 인증 이메일을 사용한다.
+어느 방식을 선택하더라도 서버는 인증된 이메일과 회원가입 대상 이메일의 동일성을 보장해야 한다.
 
 ### 비밀번호 재설정 인증번호 발송
 
@@ -239,12 +237,10 @@ POST /connect/auth/password/reset
 
 요청에 포함될 핵심 정보:
 
-- `verificationToken` 또는 `verificationId`
+- verificationToken
 - `newPassword`
 
 정확한 Request·Response DTO와 HTTP 상태 코드는 후속 API 구현 Issue에서 확정한다. 공통 오류 응답 형식이나 상세 오류 코드는 이 문서에서 임의로 만들지 않는다.
-
-현재 `ERD.md`에는 비밀번호 재설정 초안으로 `/connect/auth/password-reset/request`와 `/connect/auth/password-reset/confirm`이 기재되어 있다. 본 문서는 인증 목적을 구분한 공통 이메일 인증 API와 `/connect/auth/password/reset`을 우선 방향으로 정의한다. 실제 API 구현 전에 `ERD.md` 및 관련 문서의 기존 초안과 본 정책을 함께 검토하여 하나의 계약으로 동기화해야 하며, 이번 Issue에서는 기존 문서를 수정하지 않는다.
 
 ## 12. 오류 상황
 
@@ -272,26 +268,15 @@ POST /connect/auth/password/reset
 
 ## 13. 데이터 저장 방향
 
-향후 이메일 인증 구현에는 다음 개념적 데이터가 필요하다.
+이메일 인증 상태는 기존 MySQL의 EmailVerification Entity에 저장한다.
 
-- `email`
-- `purpose`
-- `codeHash`
-- `expiresAt`
-- `attemptCount`
-- `verifiedAt`
-- `usedAt`
-- `createdAt`
-
-이 목록은 정책 구현에 필요한 개념을 나타낼 뿐 Entity, 테이블명, 컬럼 길이 또는 관계를 확정하지 않는다. 이번 문서에서는 Repository를 구현하거나 Redis 또는 DB 저장을 선택하지 않는다.
-
-저장소 선택은 후속 구현 시 다음 기준으로 판단한다.
-
-- MVP와 Railway 환경에서의 운영 가능성
-- 만료 데이터 관리 방식
-- 재전송 제한과 인증 실패 횟수 제어 가능성
-- 구현 복잡도
-- 추가 인프라 비용
+- email과 purpose별 하나의 레코드를 유지하고 재전송 시 갱신한다.
+- 인증번호는 레코드별 random salt와 결합하여 SHA-256 codeHash로 저장한다.
+- codeSalt, codeExpiresAt, attemptCount, sentAt으로 인증번호 상태를 관리한다.
+- verifiedAt, tokenHash, tokenExpiresAt, usedAt으로 인증 완료 상태를 관리한다.
+- verificationToken 원문과 인증번호 원문은 저장하지 않는다.
+- Entity는 BaseEntity를 상속하여 createdAt과 updatedAt을 관리한다.
+- Redis는 이메일 인증 저장에 사용하지 않는다.
 
 ## 14. 개인정보 및 로그 정책
 
@@ -318,27 +303,74 @@ POST /connect/auth/password/reset
 - 인증번호 입력 실패는 최대 5회까지 허용한다.
 - 인증 성공 상태는 30분간 유효하고 한 번만 사용한다.
 - 인증 목적은 `SIGN_UP`과 `PASSWORD_RESET`으로 구분한다.
+- 이메일 인증 상태는 MySQL의 EmailVerification Entity에 저장한다.
+- 인증번호는 random salt를 포함한 SHA-256 해시로 저장한다.
+- 인증 완료 수단은 일회용 verificationToken이며 DB에는 tokenHash만 저장한다.
+- 이메일 인증 저장에 Redis를 사용하지 않는다.
 - 비밀번호는 BCrypt로 암호화하여 저장한다.
 - 학교 계정 비밀번호는 사용하지 않는다.
 
 ### 미확정 사항
 
 - 실제 메일 발송 제공자와 SMTP 계정
-- Redis 사용 여부
-- DB 기반 인증 저장 여부
-- 인증 Entity와 테이블 구조
-- `verificationToken` 또는 `verificationId` 선택
 - 비밀번호의 상세 길이와 복잡도
 - 일일 이메일 발송 제한 수치
 - IP Rate Limit 수치
-- 공통 오류 응답 형식
-- 세부 HTTP 상태 코드
+- 미구현 API의 공통 오류 응답 형식
+- 미구현 API의 세부 HTTP 상태 코드
 
-## 16. 후속 구현 순서
+## 16. 구현된 일반 사용자 인증 정책
 
-1. 이메일 발송 환경과 인증 저장 방식을 결정한다.
-2. 사용자 이메일 인증을 구현한다.
-3. 사용자 회원가입을 구현한다.
-4. 비밀번호 재설정을 구현한다.
-5. 로그인·JWT 구현과 인증 예외 처리를 연결한다.
-6. 통합 테스트를 수행하고 이메일 발송 제한을 검증한다.
+### API
+
+```http
+POST /connect/auth/login
+POST /connect/auth/token/refresh
+POST /connect/auth/logout
+```
+
+- 로그인은 `loginId`와 SKHU Connect 비밀번호를 검증한다.
+- 로그인과 재발급은 Access Token과 `expiresInSeconds=1800`을 응답 본문으로 반환한다.
+- 로그아웃은 Refresh Token Cookie가 없거나 이미 폐기된 경우에도 `204 No Content`를 반환한다.
+
+### Access Token
+
+- Access Token은 HS256으로 서명한 JWT이다.
+- 유효기간은 30분이다.
+- `sub` claim은 User ID 문자열이다.
+- `role` claim은 `USER`이다.
+- `JWT_SECRET` 환경변수는 Base64 형식이어야 하며 디코딩 결과가 최소 32바이트여야 한다.
+- Access Token 원문은 데이터베이스나 로그에 저장하지 않는다.
+
+### Refresh Token
+
+- Refresh Token은 `SecureRandom`으로 생성한 256비트 opaque token이며 유효기간은 14일이다.
+- 데이터베이스에는 원문이 아닌 SHA-256 `token_hash`만 저장한다.
+- 사용자당 활성 Refresh Token은 최대 하나이다.
+- 로그인 시 기존 활성 토큰을 교체한다.
+- 재발급 시 비관적 락으로 기존 토큰을 조회하고 새 토큰으로 회전한다.
+- 로그아웃 시 활성 토큰을 삭제한다.
+- 활성 `refresh_tokens` 행에서 조회되지 않는 토큰은 위조·재사용·로그아웃 후 재사용을 구분하지 않고 `TOKEN_INVALID`로 처리한다.
+- 활성 행에서 만료가 확인된 경우에만 `TOKEN_EXPIRED`로 처리한다.
+
+### Cookie
+
+- 이름: `refreshToken`
+- `HttpOnly`
+- `Path=/connect/auth`
+- `SameSite=Lax`
+- `Max-Age=1209600`
+- `Secure`는 `JWT_COOKIE_SECURE` 환경변수로 설정한다.
+- 로그아웃 시 동일한 이름·Path·SameSite·Secure 조건으로 `Max-Age=0`을 반환한다.
+
+### 현재 미구현 범위
+
+- Spring Security 전체 필터 체인은 아직 구현하지 않았다.
+- Access Token을 검증하여 요청 인증 정보를 구성하는 인증 필터는 아직 구현하지 않았다.
+- 관리자 로그인 및 관리자 Refresh Token 정책은 이번 일반 사용자 인증 구현 범위에 포함하지 않는다.
+
+## 17. 후속 구현 사항
+
+- 비밀번호 재설정 API
+- Access Token 인증 필터와 Spring Security 필터 체인
+- 실제 운영 환경의 이메일 발송 제한 및 IP Rate Limit 수치

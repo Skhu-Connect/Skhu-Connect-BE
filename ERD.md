@@ -35,6 +35,7 @@ MVP Entity는 다음과 같다.
 ```text
 Department
 User
+EmailVerification
 Admin
 RefreshToken
 Petition
@@ -206,6 +207,63 @@ FOREIGN KEY(department_id) REFERENCES departments(id)
 
 ---
 
+# 6.1 EmailVerification
+
+성공회대 공식 이메일의 인증번호와 인증 완료 상태를 MySQL에 저장한다.
+
+## 테이블명
+
+```text
+email_verifications
+```
+
+## 컬럼
+
+| 컬럼 | 타입 | Null | 제약조건 | 설명 |
+|---|---|---:|---|---|
+| id | BIGINT | 불가 | PK, AUTO_INCREMENT | 이메일 인증 식별자 |
+| email | VARCHAR(255) | 불가 | 복합 UNIQUE | 정규화된 성공회대 공식 이메일 |
+| purpose | VARCHAR(30) | 불가 | 복합 UNIQUE | SIGN_UP 또는 PASSWORD_RESET |
+| code_hash | VARCHAR(64) | 불가 |  | salt를 포함해 계산한 SHA-256 해시 |
+| code_salt | VARCHAR(64) | 불가 |  | 인증 레코드별 random salt |
+| code_expires_at | DATETIME(6) | 불가 |  | 인증번호 만료 시각 |
+| attempt_count | INT | 불가 |  | 인증번호 입력 실패 횟수 |
+| sent_at | DATETIME(6) | 불가 |  | 인증번호 발송 시각 |
+| verified_at | DATETIME(6) | 가능 |  | 인증번호 검증 성공 시각 |
+| token_hash | VARCHAR(64) | 가능 | UNIQUE | verificationToken SHA-256 해시 |
+| token_expires_at | DATETIME(6) | 가능 |  | 인증 완료 token 만료 시각 |
+| used_at | DATETIME(6) | 가능 |  | 인증 완료 token 소비 시각 |
+| created_at | DATETIME(6) | 불가 |  | 생성 시각 |
+| updated_at | DATETIME(6) | 불가 |  | 수정 시각 |
+
+## 관계
+
+User 또는 다른 Entity와의 FK 관계는 없다.
+
+## 제약조건 및 인덱스
+
+```text
+UNIQUE INDEX ux_email_verifications_email_purpose (email, purpose)
+UNIQUE INDEX ux_email_verifications_token_hash (token_hash)
+```
+
+## 비즈니스 규칙
+
+- 이메일은 trim 후 소문자로 정규화하며 정확히 @office.skhu.ac.kr로 끝나야 한다.
+- 이메일과 목적별 하나의 인증 레코드를 유지하고 재전송 시 같은 레코드를 갱신한다.
+- 인증번호는 숫자 6자리이고 발송 시점부터 5분간 유효하다.
+- 동일 이메일과 목적의 재전송은 발송 후 60초 동안 제한한다.
+- 인증번호 입력은 최대 5회 실패할 수 있으며 5회 실패하면 사용할 수 없다.
+- 재전송 시 기존 인증번호와 인증 완료 token을 폐기한다.
+- 인증번호 원문은 저장하지 않고 record별 salt를 포함한 SHA-256 해시만 저장한다.
+- 인증 성공 시 30분간 유효한 일회용 verificationToken을 발급한다.
+- verificationToken 원문은 저장하지 않고 SHA-256 해시만 저장한다.
+- 목적은 SIGN_UP과 PASSWORD_RESET으로 구분하며 다른 목적에 재사용할 수 없다.
+- 사용된 token과 만료된 인증번호 또는 token은 재사용할 수 없다.
+- 이메일 인증 저장에 Redis를 사용하지 않는다.
+
+---
+
 # 7. Admin
 
 관리자 웹에 로그인하는 관리자 계정을 관리한다.
@@ -269,7 +327,7 @@ refresh_tokens
 |---|---|---:|---|---|
 | `id` | `BIGINT` | 불가 | PK, AUTO_INCREMENT | Refresh Token 식별자 |
 | `user_id` | `BIGINT` | 불가 | FK, UNIQUE | 사용자 식별자 |
-| `token` | `VARCHAR(500)` | 불가 | UNIQUE | Refresh Token 또는 토큰 식별값 |
+| `token_hash` | `VARCHAR(64)` | 불가 | UNIQUE | Refresh Token 원문의 SHA-256 해시 |
 | `expires_at` | `DATETIME(6)` | 불가 |  | 만료 시각 |
 | `created_at` | `DATETIME(6)` | 불가 |  | 발급 시각 |
 | `updated_at` | `DATETIME(6)` | 불가 |  | 재발급·갱신 시각 |
@@ -283,8 +341,8 @@ User 1 : 0..1 RefreshToken
 ## 제약조건
 
 ```text
-UNIQUE(user_id)
-UNIQUE(token)
+UNIQUE INDEX ux_refresh_tokens_user_id (user_id)
+UNIQUE INDEX ux_refresh_tokens_token_hash (token_hash)
 FOREIGN KEY(user_id) REFERENCES users(id)
 ```
 
@@ -292,9 +350,16 @@ FOREIGN KEY(user_id) REFERENCES users(id)
 
 - Access Token의 유효기간은 30분이다.
 - Refresh Token의 유효기간은 14일이다.
-- Refresh Token은 HttpOnly Cookie로 전달한다.
+- Refresh Token은 `SecureRandom`으로 생성한 256비트 opaque token이다.
+- Refresh Token 원문은 저장하지 않고 SHA-256 `token_hash`만 저장한다.
+- Refresh Token은 이름 `refreshToken`, `HttpOnly`, `Path=/connect/auth`, `SameSite=Lax`, `Max-Age=1209600`인 Cookie로 전달한다.
+- Cookie의 `Secure` 여부는 `JWT_COOKIE_SECURE` 환경변수로 설정한다.
+- 로그인 시 기존 활성 Refresh Token 행의 해시와 만료 시각을 교체한다.
+- 재발급 시 기존 토큰을 새 토큰으로 회전한다.
 - 로그아웃 시 해당 사용자의 Refresh Token을 삭제한다.
 - 사용자 한 명당 활성 Refresh Token 하나만 저장한다.
+- 활성 행에서 조회되지 않는 토큰은 `TOKEN_INVALID`로 처리한다.
+- 활성 행에서 만료가 확인된 토큰은 `TOKEN_EXPIRED`로 처리한다.
 - Redis는 MVP에서 사용하지 않는다.
 
 관리자 Refresh Token 저장 방식은 현재 확정되지 않았으므로 본 Entity에는 사용자 Token만 포함한다.
@@ -733,6 +798,12 @@ SCHOOL_OFFICIAL
 
 카테고리별 청원 동의 임계치를 관리한다.
 
+## 현재 구현 범위
+
+현재 사용자 웹에서는 청원 생성 시 목표 동의 수를 계산하기 위한 기본 임계치 도메인만 구현한다.
+
+관리자 정보, 변경 사유, 관리자 수정 기능과 변경 이력은 후속 관리자 웹 범위로 분리한다.
+
 ## 테이블명
 
 ```text
@@ -748,22 +819,13 @@ threshold_settings
 | `total_student_count` | `INT` | 불가 |  | 학교 전체 기준 학생 수 |
 | `threshold_rate` | `DECIMAL(5,4)` | 불가 |  | 카테고리별 임계 비율 |
 | `minimum_count` | `INT` | 불가 |  | 최소 임계 인원 |
-| `updated_by_admin_id` | `BIGINT` | 가능 | FK | 마지막 변경 관리자 |
-| `change_reason` | `VARCHAR(500)` | 가능 |  | 마지막 변경 사유 |
 | `created_at` | `DATETIME(6)` | 불가 |  | 생성 시각 |
 | `updated_at` | `DATETIME(6)` | 불가 |  | 마지막 변경 시각 |
-
-## 관계
-
-```text
-Admin 1 : N ThresholdSetting Update
-```
 
 ## 제약조건
 
 ```text
 UNIQUE(category)
-FOREIGN KEY(updated_by_admin_id) REFERENCES admins(id)
 ```
 
 ## 초기 비율
@@ -777,6 +839,12 @@ FOREIGN KEY(updated_by_admin_id) REFERENCES admins(id)
 | `DEPARTMENT` | 0.005 |
 
 모든 카테고리의 초기 최소 임계치는 5명이다.
+
+위 비율과 최소 임계치는 카테고리별 기본 정책값이다.
+
+전체 학생 수 초기값은 아직 확정되지 않았다. 따라서 현재 사용자 웹 기본 도메인 구현에서는 `threshold_settings` 기본 행을 자동 삽입하지 않는다.
+
+ThresholdSetting 생성 시 `totalStudentCount`, `thresholdRate`, `minimumCount`를 명시적으로 제공한다.
 
 ## 계산 정책
 
@@ -793,9 +861,31 @@ FOREIGN KEY(updated_by_admin_id) REFERENCES admins(id)
 - 기숙사생 여부와 학부 소속 여부는 MVP에서 검증하지 않는다.
 - 변경된 설정은 이후 생성되는 청원부터 적용한다.
 - 기존 청원의 `target_agreement_count`는 변경하지 않는다.
-- 관리자 ID, 마지막 변경 사유, 변경 시각을 현재 설정에 기록한다.
 
-임계치 변경 이력 조회 API는 History Entity가 없어 현재 ERD만으로 구현할 수 없다.
+## 후속 관리자 웹 범위
+
+다음 필드와 관계는 Admin Entity 및 관리자 임계치 수정 기능 구현 시 추가한다.
+
+| 컬럼 | 타입 | Null | 제약조건 | 설명 |
+|---|---|---:|---|---|
+| `updated_by_admin_id` | `BIGINT` | 가능 | FK | 마지막 변경 관리자 |
+| `change_reason` | `VARCHAR(500)` | 가능 |  | 마지막 변경 사유 |
+
+관계:
+
+```text
+Admin 1 : N ThresholdSetting Update
+```
+
+후속 제약조건:
+
+```text
+FOREIGN KEY(updated_by_admin_id) REFERENCES admins(id)
+```
+
+관리자 변경은 이후 생성되는 청원에만 적용하며 기존 청원의 `target_agreement_count`는 변경하지 않는다.
+
+임계치 변경 이력 Entity와 조회 API는 별도 후속 범위이다.
 
 ---
 
@@ -877,10 +967,24 @@ UNIQUE INDEX ux_users_login_id (login_id)
 INDEX ix_users_department_id (department_id)
 ```
 
+## EmailVerification
+
+```text
+UNIQUE INDEX ux_email_verifications_email_purpose (email, purpose)
+UNIQUE INDEX ux_email_verifications_token_hash (token_hash)
+```
+
 ## Admin
 
 ```text
 UNIQUE INDEX ux_admins_login_id (login_id)
+```
+
+## RefreshToken
+
+```text
+UNIQUE INDEX ux_refresh_tokens_user_id (user_id)
+UNIQUE INDEX ux_refresh_tokens_token_hash (token_hash)
 ```
 
 ## Petition
@@ -890,7 +994,7 @@ INDEX ix_petitions_status_created_at (status, created_at)
 INDEX ix_petitions_category_created_at (category, created_at)
 INDEX ix_petitions_hidden_deleted (hidden, deleted)
 INDEX ix_petitions_writer_id_created_at (writer_id, created_at)
-INDEX ix_petitions_agreement_deadline (status, agreement_deadline)
+INDEX ix_petitions_status_agreement_deadline (status, agreement_deadline)
 ```
 
 ## Agreement
@@ -949,8 +1053,7 @@ INDEX ix_notification_logs_created_at (created_at)
 
 전체 인덱스는 실제 조회 쿼리와 실행 계획을 확인한 후 조정할 수 있다.
 
----
-
+--- 
 # 19. 삭제 및 숨김 정책
 
 ## 사용자 삭제
@@ -1015,28 +1118,34 @@ hidden_by_admin_id = 처리 관리자
 
 ## 21.1 이메일 인증
 
-다음 API가 존재하지만 저장 Entity가 확정되지 않았다.
+다음 API는 MySQL의 EmailVerification Entity를 사용한다.
 
 ```text
 POST /connect/auth/email-verifications
 POST /connect/auth/email-verifications/confirm
 ```
 
-미확정 사항:
+확정 사항:
 
-- 인증번호 저장 위치
-- 인증번호 유효시간
-- 재전송 제한
-- 인증 완료 Token 저장 방식
-- 이메일 발송 서비스
+- 이메일과 인증 목적별 하나의 레코드를 MySQL에 저장한다.
+- 인증번호 원문 대신 random salt를 포함한 SHA-256 해시를 저장한다.
+- 인증번호는 5분간 유효하고 재전송은 60초 동안 제한한다.
+- 인증 실패는 최대 5회이며 재전송 시 기존 인증 상태를 갱신한다.
+- 인증 성공 시 30분간 유효한 일회용 verificationToken을 발급한다.
+- verificationToken 원문 대신 SHA-256 tokenHash를 저장한다.
+- SIGN_UP과 PASSWORD_RESET 목적을 구분한다.
+- Redis는 사용하지 않는다.
+
+실제 SMTP 제공자는 아직 확정되지 않았다.
 
 ## 21.2 비밀번호 재설정
 
-다음 API가 존재하지만 재설정 Token 저장 방식이 확정되지 않았다.
+비밀번호 재설정은 기존 이메일 인증 API를 `purpose=PASSWORD_RESET`으로 재사용하는 방향으로 구현한다.
 
 ```text
-POST /connect/auth/password-reset/request
-POST /connect/auth/password-reset/confirm
+POST /connect/auth/email-verifications
+POST /connect/auth/email-verifications/confirm
+POST /connect/auth/password/reset
 ```
 
 ## 21.3 관리자 Refresh Token

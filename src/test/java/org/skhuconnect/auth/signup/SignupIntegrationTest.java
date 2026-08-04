@@ -1,0 +1,79 @@
+package org.skhuconnect.auth.signup;
+
+import org.junit.jupiter.api.Test;
+import org.skhuconnect.auth.email.entity.EmailVerification;
+import org.skhuconnect.auth.email.entity.EmailVerificationPurpose;
+import org.skhuconnect.auth.email.repository.EmailVerificationRepository;
+import org.skhuconnect.auth.email.service.VerificationHasher;
+import org.skhuconnect.auth.signup.dto.SignupRequest;
+import org.skhuconnect.auth.signup.service.SignupService;
+import org.skhuconnect.department.entity.Department;
+import org.skhuconnect.department.repository.DepartmentRepository;
+import org.skhuconnect.user.entity.User;
+import org.skhuconnect.user.repository.UserRepository;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+@SpringBootTest(properties = {
+        "spring.mail.host=localhost",
+        "spring.mail.port=2525",
+        "spring.mail.username=test",
+        "spring.mail.password=test",
+        "app.mail.from=test@example.com",
+        "app.jwt.secret=MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",
+        "app.jwt.cookie-secure=false"
+})
+@Transactional
+class SignupIntegrationTest {
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private SignupService signupService;
+    @org.springframework.beans.factory.annotation.Autowired
+    private EmailVerificationRepository emailVerificationRepository;
+    @org.springframework.beans.factory.annotation.Autowired
+    private UserRepository userRepository;
+    @org.springframework.beans.factory.annotation.Autowired
+    private DepartmentRepository departmentRepository;
+    @org.springframework.beans.factory.annotation.Autowired
+    private VerificationHasher hasher;
+    @org.springframework.beans.factory.annotation.Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Test
+    void signupPersistsUserAndConsumesTokenInOneTransaction() {
+        String unique = UUID.randomUUID().toString().replace("-", "");
+        String email = unique + "@office.skhu.ac.kr";
+        String loginId = "user" + unique.substring(0, 12);
+        String rawToken = "token-" + unique;
+        LocalDateTime now = LocalDateTime.now();
+
+        Department department = departmentRepository.saveAndFlush(
+                Department.create("D" + unique.substring(0, 12),
+                        "테스트학과-" + unique.substring(0, 12)));
+        EmailVerification verification = EmailVerification.create(
+                email,
+                EmailVerificationPurpose.SIGN_UP,
+                hasher.hashCode("salt", "123456"),
+                "salt",
+                now.plusMinutes(5),
+                now
+        );
+        verification.verify(hasher.hashToken(rawToken), now, now.plusMinutes(30));
+        emailVerificationRepository.saveAndFlush(verification);
+
+        signupService.signup(new SignupRequest(
+                rawToken, loginId, "raw-password", department.getId()));
+
+        User saved = userRepository.findByLoginId(loginId).orElseThrow();
+        assertThat(saved.getEmail()).isEqualTo(email);
+        assertThat(passwordEncoder.matches("raw-password", saved.getPassword())).isTrue();
+        assertThat(saved.getPassword()).isNotEqualTo("raw-password");
+        assertThat(verification.isUsed()).isTrue();
+    }
+}
