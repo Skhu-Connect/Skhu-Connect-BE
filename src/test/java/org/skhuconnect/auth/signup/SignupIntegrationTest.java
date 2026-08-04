@@ -25,7 +25,9 @@ import static org.assertj.core.api.Assertions.assertThat;
         "spring.mail.port=2525",
         "spring.mail.username=test",
         "spring.mail.password=test",
-        "app.mail.from=test@example.com"
+        "app.mail.from=test@example.com",
+        "app.jwt.secret=MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=",
+        "app.jwt.cookie-secure=false"
 })
 @Transactional
 class SignupIntegrationTest {
