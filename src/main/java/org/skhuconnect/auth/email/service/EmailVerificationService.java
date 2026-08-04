@@ -7,6 +7,8 @@ import org.skhuconnect.auth.email.exception.EmailVerificationException;
 import org.skhuconnect.auth.email.exception.EmailVerificationException.Reason;
 import org.skhuconnect.auth.email.mail.EmailSender;
 import org.skhuconnect.auth.email.repository.EmailVerificationRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.skhuconnect.user.repository.UserRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -14,9 +16,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class EmailVerificationService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(
+            EmailVerificationService.class);
     private static final long CODE_VALID_MINUTES = 5;
     private static final long TOKEN_VALID_MINUTES = 30;
     private static final long TOKEN_EXPIRES_IN_SECONDS = 1800;
@@ -52,24 +57,57 @@ public class EmailVerificationService {
 
     @Transactional
     public void sendCode(String email, EmailVerificationPurpose purpose) {
-        String normalizedEmail = normalizer.normalize(email);
-        requirePurpose(purpose);
-        validateAccountState(normalizedEmail, purpose);
-
-        LocalDateTime now = LocalDateTime.now(clock);
-        CodeMaterial material = newCode();
-        EmailVerification verification = repository.findByEmailAndPurpose(
-                        normalizedEmail, purpose)
-                .map(existing -> refresh(existing, now, material))
-                .orElseGet(() -> create(normalizedEmail, purpose, now, material));
+        long totalStartedAt = System.nanoTime();
+        long userExistsNanos = -1;
+        long verificationLookupNanos = -1;
+        long saveFlushNanos = -1;
+        long mailSendNanos = -1;
+        boolean success = false;
 
         try {
-            repository.saveAndFlush(verification);
-        } catch (DataIntegrityViolationException exception) {
-            throw error(Reason.RESEND_TOO_SOON);
-        }
+            String normalizedEmail = normalizer.normalize(email);
+            requirePurpose(purpose);
 
-        emailSender.sendVerificationCode(normalizedEmail, material.rawCode());
+            long userExistsStartedAt = System.nanoTime();
+            boolean userExists = userRepository.existsByEmail(normalizedEmail);
+            userExistsNanos = System.nanoTime() - userExistsStartedAt;
+            validateAccountState(userExists, purpose);
+
+            LocalDateTime now = LocalDateTime.now(clock);
+            CodeMaterial material = newCode();
+            long verificationLookupStartedAt = System.nanoTime();
+            EmailVerification verification = repository.findByEmailAndPurpose(
+                            normalizedEmail, purpose)
+                    .map(existing -> refresh(existing, now, material))
+                    .orElseGet(() -> create(normalizedEmail, purpose, now, material));
+            verificationLookupNanos = System.nanoTime() - verificationLookupStartedAt;
+
+            long saveFlushStartedAt = System.nanoTime();
+            try {
+                repository.saveAndFlush(verification);
+            } catch (DataIntegrityViolationException exception) {
+                throw error(Reason.RESEND_TOO_SOON);
+            } finally {
+                saveFlushNanos = System.nanoTime() - saveFlushStartedAt;
+            }
+
+            long mailSendStartedAt = System.nanoTime();
+            try {
+                emailSender.sendVerificationCode(normalizedEmail, material.rawCode());
+            } finally {
+                mailSendNanos = System.nanoTime() - mailSendStartedAt;
+            }
+            success = true;
+        } finally {
+            LOGGER.info(
+                    "email_verification_send purpose={} success={} "
+                            + "user_exists_ms={} verification_lookup_ms={} "
+                            + "save_flush_ms={} mail_send_ms={} total_ms={}",
+                    purpose, success, toMillis(userExistsNanos),
+                    toMillis(verificationLookupNanos), toMillis(saveFlushNanos),
+                    toMillis(mailSendNanos),
+                    toMillis(System.nanoTime() - totalStartedAt));
+        }
     }
 
     @Transactional(noRollbackFor = EmailVerificationException.class)
@@ -153,14 +191,17 @@ public class EmailVerificationService {
     }
 
     private void validateAccountState(
-            String email, EmailVerificationPurpose purpose) {
-        boolean exists = userRepository.existsByEmail(email);
-        if (purpose == EmailVerificationPurpose.SIGN_UP && exists) {
+            boolean userExists, EmailVerificationPurpose purpose) {
+        if (purpose == EmailVerificationPurpose.SIGN_UP && userExists) {
             throw error(Reason.EMAIL_ALREADY_REGISTERED);
         }
-        if (purpose == EmailVerificationPurpose.PASSWORD_RESET && !exists) {
+        if (purpose == EmailVerificationPurpose.PASSWORD_RESET && !userExists) {
             throw error(Reason.EMAIL_NOT_REGISTERED);
         }
+    }
+
+    private long toMillis(long nanos) {
+        return nanos < 0 ? -1 : TimeUnit.NANOSECONDS.toMillis(nanos);
     }
 
     private void validateCodeState(
