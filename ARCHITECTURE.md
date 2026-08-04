@@ -106,6 +106,16 @@ RefreshToken Entity에서 관리한다.
 
 Redis는 MVP에서 사용하지 않는다.
 
+## 이메일 인증 저장
+
+- 이메일 인증 상태는 기존 MySQL에 EmailVerification Entity로 저장한다.
+- 이메일과 인증 목적별 하나의 활성 레코드를 유지한다.
+- 인증 목적은 SIGN_UP, PASSWORD_RESET으로 구분한다.
+- 인증번호 원문은 저장하지 않고 random salt를 포함한 SHA-256 해시만 저장한다.
+- 인증 성공 시 일회용 verificationToken을 발급하며 원문은 클라이언트에 한 번만 반환한다.
+- verificationToken 원문은 저장하지 않고 SHA-256 해시만 저장한다.
+- 이메일 인증 저장 및 만료 관리에 Redis를 사용하지 않는다.
+
 ---
 
 # 5. 회원가입
@@ -222,6 +232,8 @@ ThresholdSetting
 NotificationLog
 
 RefreshToken
+
+EmailVerification
 ```
 
 History Entity는 MVP 이후 구현한다.
