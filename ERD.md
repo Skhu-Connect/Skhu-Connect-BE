@@ -798,6 +798,12 @@ SCHOOL_OFFICIAL
 
 카테고리별 청원 동의 임계치를 관리한다.
 
+## 현재 구현 범위
+
+현재 사용자 웹에서는 청원 생성 시 목표 동의 수를 계산하기 위한 기본 임계치 도메인만 구현한다.
+
+관리자 정보, 변경 사유, 관리자 수정 기능과 변경 이력은 후속 관리자 웹 범위로 분리한다.
+
 ## 테이블명
 
 ```text
@@ -813,22 +819,13 @@ threshold_settings
 | `total_student_count` | `INT` | 불가 |  | 학교 전체 기준 학생 수 |
 | `threshold_rate` | `DECIMAL(5,4)` | 불가 |  | 카테고리별 임계 비율 |
 | `minimum_count` | `INT` | 불가 |  | 최소 임계 인원 |
-| `updated_by_admin_id` | `BIGINT` | 가능 | FK | 마지막 변경 관리자 |
-| `change_reason` | `VARCHAR(500)` | 가능 |  | 마지막 변경 사유 |
 | `created_at` | `DATETIME(6)` | 불가 |  | 생성 시각 |
 | `updated_at` | `DATETIME(6)` | 불가 |  | 마지막 변경 시각 |
-
-## 관계
-
-```text
-Admin 1 : N ThresholdSetting Update
-```
 
 ## 제약조건
 
 ```text
 UNIQUE(category)
-FOREIGN KEY(updated_by_admin_id) REFERENCES admins(id)
 ```
 
 ## 초기 비율
@@ -842,6 +839,12 @@ FOREIGN KEY(updated_by_admin_id) REFERENCES admins(id)
 | `DEPARTMENT` | 0.005 |
 
 모든 카테고리의 초기 최소 임계치는 5명이다.
+
+위 비율과 최소 임계치는 카테고리별 기본 정책값이다.
+
+전체 학생 수 초기값은 아직 확정되지 않았다. 따라서 현재 사용자 웹 기본 도메인 구현에서는 `threshold_settings` 기본 행을 자동 삽입하지 않는다.
+
+ThresholdSetting 생성 시 `totalStudentCount`, `thresholdRate`, `minimumCount`를 명시적으로 제공한다.
 
 ## 계산 정책
 
@@ -858,9 +861,31 @@ FOREIGN KEY(updated_by_admin_id) REFERENCES admins(id)
 - 기숙사생 여부와 학부 소속 여부는 MVP에서 검증하지 않는다.
 - 변경된 설정은 이후 생성되는 청원부터 적용한다.
 - 기존 청원의 `target_agreement_count`는 변경하지 않는다.
-- 관리자 ID, 마지막 변경 사유, 변경 시각을 현재 설정에 기록한다.
 
-임계치 변경 이력 조회 API는 History Entity가 없어 현재 ERD만으로 구현할 수 없다.
+## 후속 관리자 웹 범위
+
+다음 필드와 관계는 Admin Entity 및 관리자 임계치 수정 기능 구현 시 추가한다.
+
+| 컬럼 | 타입 | Null | 제약조건 | 설명 |
+|---|---|---:|---|---|
+| `updated_by_admin_id` | `BIGINT` | 가능 | FK | 마지막 변경 관리자 |
+| `change_reason` | `VARCHAR(500)` | 가능 |  | 마지막 변경 사유 |
+
+관계:
+
+```text
+Admin 1 : N ThresholdSetting Update
+```
+
+후속 제약조건:
+
+```text
+FOREIGN KEY(updated_by_admin_id) REFERENCES admins(id)
+```
+
+관리자 변경은 이후 생성되는 청원에만 적용하며 기존 청원의 `target_agreement_count`는 변경하지 않는다.
+
+임계치 변경 이력 Entity와 조회 API는 별도 후속 범위이다.
 
 ---
 
