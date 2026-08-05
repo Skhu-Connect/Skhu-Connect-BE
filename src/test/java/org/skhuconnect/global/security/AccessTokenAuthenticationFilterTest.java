@@ -110,6 +110,70 @@ class AccessTokenAuthenticationFilterTest {
         verify(jwtDecoder, never()).decode(org.mockito.ArgumentMatchers.anyString());
     }
 
+    @Test
+    void petitionListGetDoesNotRequireToken() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "GET", "/connect/petitions");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        verify(filterChain).doFilter(request, response);
+        verify(jwtDecoder, never()).decode(
+                org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test
+    void petitionDetailGetDoesNotRequireToken() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "GET", "/connect/petitions/10");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        verify(filterChain).doFilter(request, response);
+        verify(jwtDecoder, never()).decode(
+                org.mockito.ArgumentMatchers.anyString());
+    }
+    @Test
+    void petitionWriteMethodsRequireToken() throws Exception {
+        for (String method : List.of("POST", "PUT", "DELETE")) {
+            MockHttpServletRequest request = new MockHttpServletRequest(
+                    method, method.equals("POST")
+                            ? "/connect/petitions"
+                            : "/connect/petitions/10");
+            MockHttpServletResponse response = new MockHttpServletResponse();
+
+            filter.doFilter(request, response, filterChain);
+
+            assertThat(response.getStatus()).isEqualTo(401);
+        }
+    }
+
+    @Test
+    void publicGetIgnoresValidOrInvalidAuthorizationHeader() throws Exception {
+        for (String token : List.of("valid-token", "invalid-token")) {
+            MockHttpServletRequest request = new MockHttpServletRequest(
+                    "GET", "/connect/petitions/10");
+            request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);
+            MockHttpServletResponse response = new MockHttpServletResponse();
+
+            filter.doFilter(request, response, filterChain);
+
+            verify(jwtDecoder, never()).decode(token);
+        }
+    }
+
+    @Test
+    void arbitraryPetitionSubPathIsNotPublic() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "GET", "/connect/petitions/10/comments");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        assertThat(response.getStatus()).isEqualTo(401);
+    }
     private MockHttpServletRequest petitionRequest() {
         return new MockHttpServletRequest("POST", "/connect/petitions");
     }

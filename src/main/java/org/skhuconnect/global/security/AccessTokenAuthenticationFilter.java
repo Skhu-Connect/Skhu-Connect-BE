@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -31,7 +32,16 @@ public class AccessTokenAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return !(path.equals(PETITION_PATH) || path.startsWith(PETITION_PATH + "/"));
+        boolean petitionPath = path.equals(PETITION_PATH)
+                || path.startsWith(PETITION_PATH + "/");
+        if (!petitionPath) {
+            return true;
+        }
+        if (HttpMethod.GET.matches(request.getMethod())) {
+            return path.equals(PETITION_PATH)
+                    || path.matches(PETITION_PATH + "/\\d+");
+        }
+        return false;
     }
 
     @Override

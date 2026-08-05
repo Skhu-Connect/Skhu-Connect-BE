@@ -4,7 +4,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.skhuconnect.petition.dto.request.PetitionCreateRequest;
+import org.skhuconnect.petition.dto.request.PetitionQueryCondition;
 import org.skhuconnect.petition.dto.request.PetitionUpdateRequest;
+import org.skhuconnect.petition.dto.response.PetitionPageResponse;
+import org.skhuconnect.petition.dto.response.PetitionQueryResponse;
 import org.skhuconnect.petition.dto.response.PetitionResponse;
 import org.skhuconnect.petition.entity.Petition;
 import org.skhuconnect.petition.entity.PetitionCategory;
@@ -15,6 +18,11 @@ import org.skhuconnect.threshold.entity.ThresholdSetting;
 import org.skhuconnect.threshold.repository.ThresholdSettingRepository;
 import org.skhuconnect.user.entity.User;
 import org.skhuconnect.user.repository.UserRepository;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,11 +31,13 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -194,6 +204,59 @@ class PetitionServiceTest {
 
         assertUpdateNotEditable();
         assertDeleteNotEditable();
+    }
+    @Test
+    void queryDisplaysExpiredEffectiveStatus() {
+        Petition expired = petition(mockUser(1L));
+        ReflectionTestUtils.setField(
+                expired, "agreementDeadline", LocalDateTime.of(2026, 8, 5, 11, 59));
+        when(petitionRepository.findAll(
+                any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(expired)));
+
+        PetitionPageResponse response = service.findAll(
+                new PetitionQueryCondition(null, null, null));
+
+        assertThat(response.content()).extracting(PetitionQueryResponse::status)
+                .containsExactly(PetitionStatus.EXPIRED);
+    }
+
+    @Test
+    void queryMapsExpiresAtSortToAgreementDeadline() {
+        when(petitionRepository.findAll(
+                any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+        ArgumentCaptor<Pageable> captor = ArgumentCaptor.forClass(Pageable.class);
+
+        service.findAll(new PetitionQueryCondition(
+                null, null, null, 0, 20, "expiresAt,asc"));
+
+        verify(petitionRepository).findAll(
+                any(Specification.class), captor.capture());
+        assertThat(captor.getValue().getSort().getOrderFor("agreementDeadline"))
+                .isNotNull()
+                .extracting(Sort.Order::getDirection)
+                .isEqualTo(Sort.Direction.ASC);
+    }
+
+    @Test
+    void queryRejectsUnsupportedSortProperty() {
+        assertThatThrownBy(() -> service.findAll(new PetitionQueryCondition(
+                null, null, null, 0, 20, "title,desc")))
+                .isInstanceOf(PetitionException.class)
+                .extracting("reason")
+                .isEqualTo(PetitionException.Reason.INVALID_SORT);
+    }
+
+    @Test
+    void detailRejectsHiddenDeletedOrMissingPetition() {
+        when(petitionRepository.findByIdAndDeletedFalseAndHiddenFalse(10L))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.findDetail(10L))
+                .isInstanceOf(PetitionException.class)
+                .extracting("reason")
+                .isEqualTo(PetitionException.Reason.PETITION_NOT_FOUND);
     }
     @Test
     void methodsHaveTransactionBoundaries() throws Exception {

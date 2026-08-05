@@ -6,6 +6,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.skhuconnect.petition.dto.request.PetitionCreateRequest;
 import org.skhuconnect.petition.dto.request.PetitionUpdateRequest;
+import org.skhuconnect.petition.dto.response.PetitionPageResponse;
+import org.skhuconnect.petition.dto.response.PetitionQueryResponse;
 import org.skhuconnect.petition.dto.response.PetitionResponse;
 import org.skhuconnect.petition.entity.PetitionCategory;
 import org.skhuconnect.petition.entity.PetitionStatus;
@@ -17,6 +19,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -26,6 +29,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -150,6 +154,79 @@ class PetitionControllerTest {
     }
 
     @Test
+    void anonymousUserCanQueryPetitionList() throws Exception {
+        when(service.findAll(any())).thenReturn(pageResponse());
+
+        mockMvc.perform(get("/connect/petitions")
+                        .param("keyword", "library")
+                        .param("category", "LIBRARY")
+                        .param("status", "OPEN")
+                        .param("page", "0")
+                        .param("size", "20")
+                        .param("sort", "createdAt,desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(10))
+                .andExpect(jsonPath("$.content[0].status").value("OPEN"));
+    }
+
+    @Test
+    void anonymousUserCanQueryPetitionDetail() throws Exception {
+        when(service.findDetail(10L)).thenReturn(queryResponse());
+
+        mockMvc.perform(get("/connect/petitions/10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(10))
+                .andExpect(jsonPath("$.expiresAt").exists());
+    }
+
+    @Test
+    void invalidSortReturnsBadRequest() throws Exception {
+        doThrow(new PetitionException(PetitionException.Reason.INVALID_SORT))
+                .when(service).findAll(any());
+
+        mockMvc.perform(get("/connect/petitions")
+                        .param("sort", "title,desc"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title")
+                        .value("Invalid petition sort property"));
+    }
+
+    @Test
+    void hiddenDeletedOrMissingDetailReturnsNotFound() throws Exception {
+        doThrow(new PetitionException(PetitionException.Reason.PETITION_NOT_FOUND))
+                .when(service).findDetail(10L);
+
+        mockMvc.perform(get("/connect/petitions/10"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.title").value("Petition not found"));
+    }
+    @Test
+    void invalidCategoryAndStatusReturnBadRequest() throws Exception {
+        mockMvc.perform(get("/connect/petitions")
+                        .param("category", "INVALID"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(get("/connect/petitions")
+                        .param("status", "INVALID"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void defaultAndInvalidPageParametersAreHandled() throws Exception {
+        when(service.findAll(any())).thenReturn(pageResponse());
+
+        mockMvc.perform(get("/connect/petitions"))
+                .andExpect(status().isOk());
+
+        doThrow(new PetitionException(PetitionException.Reason.INVALID_PAGE))
+                .when(service).findAll(any());
+        mockMvc.perform(get("/connect/petitions")
+                        .param("page", "-1")
+                        .param("size", "0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title")
+                        .value("Invalid petition page request"));
+    }
+    @Test
     void exposesSwaggerDocumentation() throws Exception {
         assertThat(PetitionController.class).hasAnnotation(Tag.class);
         assertThat(PetitionController.class.getMethod(
@@ -163,6 +240,26 @@ class PetitionControllerTest {
                 .getAnnotation(Operation.class)).isNotNull();
     }
 
+    private PetitionPageResponse pageResponse() {
+        return new PetitionPageResponse(
+                List.of(queryResponse()), 0, 20, 1, 1, true, true);
+    }
+
+    private PetitionQueryResponse queryResponse() {
+        LocalDateTime now = LocalDateTime.of(2026, 8, 5, 12, 0);
+        return new PetitionQueryResponse(
+                10L,
+                PetitionCategory.LIBRARY,
+                PetitionStatus.OPEN,
+                "library",
+                "content",
+                0,
+                10,
+                now.plusDays(30),
+                now,
+                now
+        );
+    }
     private PetitionResponse response(String title, String content) {
         LocalDateTime now = LocalDateTime.of(2026, 8, 5, 12, 0);
         return new PetitionResponse(

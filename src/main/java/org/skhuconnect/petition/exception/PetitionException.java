@@ -7,7 +7,9 @@ public class PetitionException extends RuntimeException {
         THRESHOLD_SETTING_NOT_FOUND,
         PETITION_NOT_FOUND,
         PETITION_FORBIDDEN,
-        PETITION_NOT_EDITABLE
+        PETITION_NOT_EDITABLE,
+        INVALID_SORT,
+        INVALID_PAGE
     }
 
     private final Reason reason;
