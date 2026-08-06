@@ -1,78 +1,80 @@
-# SKHU Connect
+# SKHU Connect Backend
 
-> 성공회대학교 학생 참여형 청원 플랫폼
+성공회대학교 학생들이 청원을 등록하고, 동의·댓글·북마크를 통해 의견을 모으며 학교의 검토와 공식 답변까지 추적하는 학생 참여형 청원 플랫폼의 백엔드입니다.
 
-## 📖 프로젝트 소개
-
-SKHU Connect는 성공회대학교 학생들이 학교에 건의사항을 등록하고,
-학생들의 공감을 통해 우선순위를 결정하며,
-학교 담당자가 공식 답변을 제공하는 청원 플랫폼입니다.
-
-단순한 익명 게시판이 아닌,
-학생 의견을 체계적으로 수렴하고
-학교와 학생 간의 소통을 연결하는 것을 목표로 합니다.
-
----
-
-## ✨ 주요 기능
-
-- 청원 등록
-- 청원 공감
-- 카테고리별 청원 조회
-- 공감 임계치 달성 여부 확인
-- 관리자 검토 및 답변
-- 답변 상태 관리
-- 공감 순 인기 청원 조회
-
----
-
-## 🛠 Tech Stack
-
-### Backend
+## 기술 스택
 
 - Java 17
-- Spring Boot 4
-- Spring Web MVC
-- Spring Data JPA
-- Spring Security
-- Validation
-- MySQL
-- Gradle
-- Lombok
+- Spring Boot 4.1.0
+- Spring Web MVC, Validation, Data JPA, Mail
+- Spring Security Crypto, OAuth2 JOSE(JWT)
+- MySQL, Gradle Groovy
+- Springdoc OpenAPI 3.0.3 / Swagger UI
+- JUnit 5, Mockito, Spring Boot Test
 
-### Deployment
+## 구현 완료(dev 기준)
 
-- Railway (Planned)
+- 공통 JPA·환경변수·Swagger 기반
+- 학과 도메인과 학과 목록 조회
+- 사용자 도메인, 학교 이메일 인증, 회원가입, 로그인
+- JWT Access Token, Refresh Token 재발급·회전, 로그아웃
+- 비밀번호 재설정
+- 임계치 기본 도메인
+- 청원 등록·수정·논리 삭제·목록·검색·상세 조회
+- 청원 동의·취소, 목표 달성 시 `UNDER_REVIEW` 전환
+- 청원 북마크 등록·취소·내 목록
+- 댓글·대댓글·댓글 공감, 청원별 익명 번호
 
----
+## 진행 중
 
-## 🚀 Getting Started
+브랜치 `feat/19-user-notification`에서 사용자 알림 문서와 구현을 작업 중입니다. 알림 Entity/API와 주요 이벤트 연결 코드가 작업 트리에 있으나 전체 `clean test`, `clean build`가 완료되기 전까지 완료 기능으로 간주하지 않습니다. 공식 답변 등록 API가 아직 없어 `ANSWERED` 알림의 실제 호출 지점도 연결되지 않았습니다.
 
-### Clone
+## 남은 주요 작업
 
-```bash
-git clone https://github.com/Skhu-Connect/backend.git
+- 사용자 알림 구현 검증 및 `ANSWERED` 이벤트 연결
+- 공식 답변·관리자 웹 기능
+- 사용자 정보·활동 내역 조회
+- 사용자 웹 API 통합 테스트와 문서 최종 정리
+- 배포 환경 확정
+
+## 실행
+
+필수 환경변수:
+
+```text
+DB_URL
+DB_USERNAME
+DB_PASSWORD
+MAIL_HOST
+MAIL_PORT
+MAIL_USERNAME
+MAIL_PASSWORD
+MAIL_FROM
+JWT_SECRET
+JWT_COOKIE_SECURE (선택, 기본 false)
+PORT (선택, 기본 8080)
 ```
 
-### Run
+Windows:
 
-```bash
-./gradlew bootRun
+```powershell
+.\gradlew.bat bootRun
+.\gradlew.bat clean test
+.\gradlew.bat clean build
 ```
 
----
+Swagger UI: `http://localhost:8080/swagger-ui/index.html`
 
-## 📌 Project Status
+## 문서 읽기 순서
 
-현재 초기 프로젝트 세팅 완료
+1. `AGENTS.md` — 작업 규칙, Git 전략, 현재 상태
+2. `ARCHITECTURE.md` — 구조와 확정 정책
+3. `ERD.md` — 테이블·관계·제약조건
+4. 관련 소스와 테스트
 
-- Spring Boot 초기 설정
-- MySQL 연결
-- GitHub Organization 구성
-- Railway 배포 예정
+## Git
 
----
-
-## 👨‍💻 Team
-
-SKHU Connect Team
+- `main`: 안정 배포 기준
+- `dev`: 통합 개발 기준
+- 기능 브랜치: 최신 로컬 `dev`에서 생성
+- 요청 없이는 commit, push, PR, merge를 수행하지 않습니다.

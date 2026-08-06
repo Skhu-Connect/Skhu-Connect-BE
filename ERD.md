@@ -642,10 +642,9 @@ FOREIGN KEY(hidden_by_admin_id) REFERENCES admins(id)
 - 작성자는 자신의 댓글을 수정·삭제할 수 있다.
 - 사용자 삭제는 `deleted`, 관리자 숨김은 `hidden`으로 구분한다.
 - 숨김 댓글은 원문 대신 숨김 안내 문구를 반환한다.
-- `EXPIRED` 청원에는 새로운 댓글을 작성할 수 없다.
+- `OPEN`, `UNDER_REVIEW`, `ANSWERED` 상태에서는 새로운 댓글을 작성할 수 있다.
+- `EXPIRED` 상태에서는 새로운 댓글을 작성할 수 없다.
 - 숨김 또는 삭제된 청원에는 새로운 댓글을 작성할 수 없다.
-
-`ANSWERED` 상태에서 댓글 작성을 허용할지는 아직 확정되지 않았다.
 
 삭제된 댓글의 사용자 화면 표시 방식은 아직 확정되지 않았다.
 
@@ -765,12 +764,10 @@ FOREIGN KEY(user_id) REFERENCES users(id)
 ```
 
 ## 비즈니스 규칙
-
 - 사용자 한 명은 댓글 하나에 한 번만 공감할 수 있다.
 - 공감한 댓글에는 공감을 취소할 수 있다.
 - 숨김 또는 삭제된 댓글에는 새로운 공감을 등록할 수 없다.
-
-만료 청원의 기존 댓글에 공감할 수 있는지는 아직 확정되지 않았다.
+- `OPEN`, `UNDER_REVIEW`, `ANSWERED`, `EXPIRED` 상태의 기존 댓글에는 공감 및 공감 취소가 가능하다.
 
 ---
 
@@ -789,11 +786,11 @@ notifications
 | 컬럼 | 타입 | Null | 제약조건 | 설명 |
 |---|---|---:|---|---|
 | `id` | `BIGINT` | 불가 | PK, AUTO_INCREMENT | 알림 식별자 |
-| `user_id` | `BIGINT` | 불가 | FK | 알림 수신 사용자 |
+| `receiver_id` | `BIGINT` | 불가 | FK | 알림 수신 사용자 |
 | `petition_id` | `BIGINT` | 가능 | FK | 관련 청원 |
+| `comment_id` | `BIGINT` | 가능 | FK | 관련 댓글 또는 대댓글 |
 | `type` | `VARCHAR(50)` | 불가 |  | 사용자 알림 유형 |
-| `title` | `VARCHAR(150)` | 불가 |  | 알림 제목 |
-| `content` | `VARCHAR(500)` | 불가 |  | 알림 내용 |
+| `event_key` | `VARCHAR(150)` | 불가 | UNIQUE | 동일 이벤트 중복 방지 키 |
 | `is_read` | `BOOLEAN` | 불가 | DEFAULT FALSE | 읽음 여부 |
 | `read_at` | `DATETIME(6)` | 가능 |  | 읽은 시각 |
 | `created_at` | `DATETIME(6)` | 불가 |  | 생성 시각 |
@@ -804,13 +801,16 @@ notifications
 ```text
 User 1 : N Notification
 Petition 1 : N Notification
+Comment 1 : N Notification
 ```
 
 ## 제약조건
 
 ```text
-FOREIGN KEY(user_id) REFERENCES users(id)
+FOREIGN KEY(receiver_id) REFERENCES users(id)
 FOREIGN KEY(petition_id) REFERENCES petitions(id)
+FOREIGN KEY(comment_id) REFERENCES comments(id)
+UNIQUE(event_key)
 ```
 
 ## 비즈니스 규칙
@@ -820,9 +820,9 @@ FOREIGN KEY(petition_id) REFERENCES petitions(id)
 - 전체 읽음 처리 시 사용자의 읽지 않은 알림을 모두 변경한다.
 - 읽은 알림도 목록에서 유지한다.
 - 웹 브라우저 Push 알림은 MVP에서 제외한다.
-- `notification_enabled`가 비활성화된 사용자에게 생성할 알림 범위는 구현 전 확인한다.
+- `notification_enabled=false`인 사용자에게는 새 알림을 생성하지 않는다.
 
-사용자 알림 유형과 수신 대상의 세부 정책은 API 구현 Issue에서 확정한다.
+사용자 알림 유형과 수신 대상은 본 문서의 사용자 알림 확정 정책을 따른다.
 
 ---
 
@@ -1129,8 +1129,10 @@ UNIQUE INDEX ux_comment_likes_comment_user (comment_id, user_id)
 ## Notification
 
 ```text
-INDEX ix_notifications_user_created_at (user_id, created_at)
-INDEX ix_notifications_user_read (user_id, is_read)
+UNIQUE INDEX ux_notifications_event_key (event_key)
+INDEX ix_notifications_receiver_read_created (receiver_id, is_read, created_at)
+INDEX ix_notifications_petition_id (petition_id)
+INDEX ix_notifications_comment_id (comment_id)
 ```
 
 ## OfficialAnswer
@@ -1198,17 +1200,16 @@ hidden_by_admin_id = 처리 관리자
 | 기능 | OPEN | UNDER_REVIEW | ANSWERED | EXPIRED |
 |---|---:|---:|---:|---:|
 | 청원 조회 | 가능 | 가능 | 가능 | 가능 |
-| 신규 동의 | 가능 | 가능 | 미확정 | 불가 |
+| 신규 동의 | 가능 | 가능 | 불가 | 불가 |
 | 동의 취소 | 가능 | 불가 | 불가 | 불가 |
 | 댓글 조회 | 가능 | 가능 | 가능 | 가능 |
-| 댓글 작성 | 가능 | 가능 | 미확정 | 불가 |
-| 댓글 공감 | 가능 | 가능 | 미확정 | 미확정 |
+| 댓글 작성 | 가능 | 가능 | 가능 | 불가 |
+| 댓글 공감 | 가능 | 가능 | 가능 | 가능 |
 | 북마크 | 가능 | 가능 | 가능 | 가능 |
 | 청원 수정 | 동의 0명일 때 가능 | 불가 | 불가 | 불가 |
 | 청원 삭제 | 동의 0명일 때 가능 | 불가 | 불가 | 불가 |
 | 공식 답변 등록 | 불가 | 가능 | 불가 | 원칙상 불가 |
 | 공식 답변 수정 | 해당 없음 | 해당 없음 | 가능 | 해당 없음 |
-
 숨김 또는 사용자 삭제 상태에서는 상태값과 관계없이 새로운 참여 기능을 차단한다.
 
 ---
@@ -1285,24 +1286,15 @@ GET /connect/admin/threshold-settings/history
 
 ## 21.7 상태별 동작
 
-다음 정책은 아직 확정되지 않았다.
+다음 정책은 아직 미확정이다.
 
-- `ANSWERED` 청원의 신규 동의 가능 여부
-- `ANSWERED` 청원의 댓글 작성 가능 여부
-- `ANSWERED` 청원의 댓글 공감 가능 여부
-- `EXPIRED` 청원의 기존 댓글 공감 가능 여부
 - 사용자 삭제 댓글의 화면 표시 방식
 - 삭제된 청원의 관리자 화면 노출 여부
 - 숨김 해제 시 기존 숨김 사유 보존 여부
 
 ## 21.8 사용자 알림 정책
 
-알림 Entity는 정의되어 있지만 다음 사항은 아직 확정되지 않았다.
-
-- 알림 유형 전체 목록
-- 유형별 수신 대상
-- 동의 수 구간 알림 여부
-- 알림 설정을 비활성화했을 때 생성하지 않을 알림 범위
+사용자 알림 유형, 수신 대상, 중복 방지, 읽음 및 조회 정책은 Notification 절로 확정하였다.
 
 ---
 
@@ -1331,3 +1323,12 @@ Codex는 다음 원칙을 따른다.
 - 원댓글과 대댓글은 각각 `created_at ASC, id ASC`로 정렬한다.
 - 원댓글 응답은 `replies` 배열을 포함하고, 대댓글 응답은 `parentCommentId`를 포함하며 중첩 `replies`는 두지 않는다.
 - 대댓글은 원댓글과 같은 `PetitionAnonymousNumber` 체계를 사용한다. 기존 매핑은 재사용하고 최초 활동 사용자는 기존 발급 정책으로 새 매핑을 발급한다.
+## 사용자 알림 확정 정책
+
+- 유형은 `PETITION_AGREEMENT_60_PERCENT`, `PETITION_AGREEMENT_100_PERCENT`, `PETITION_UNDER_REVIEW`, `PETITION_ANSWERED`, `COMMENT_REPLY`, `COMMENT_LIKE`, `REPLY_LIKE`이다.
+- 청원 작성자는 60%, 100%, 검토 시작, 공식 답변 알림을 받는다.
+- 청원 동의자는 검토 시작과 공식 답변 알림을 받되 작성자는 중복 수신하지 않는다.
+- 원댓글 작성자는 대댓글과 원댓글 공감 알림을, 대댓글 작성자는 대댓글 공감 알림을 받는다.
+- 자기 이벤트와 `notification_enabled=false` 수신자에게는 생성하지 않는다.
+- `event_key`로 이벤트별·수신자별 최초 1회 생성을 보장한다.
+- 알림은 삭제하지 않으며 개별·전체 읽음, 최신순 목록, 읽지 않은 개수 조회를 지원한다.

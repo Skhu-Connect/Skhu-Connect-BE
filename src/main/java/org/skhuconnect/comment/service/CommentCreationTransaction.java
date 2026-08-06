@@ -16,6 +16,8 @@ import org.skhuconnect.user.repository.UserRepository;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.skhuconnect.notification.service.NotificationEventService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -28,6 +30,7 @@ public class CommentCreationTransaction {
     private final PetitionRepository petitionRepository;
     private final UserRepository userRepository;
     private final Clock clock;
+    private NotificationEventService notificationEventService;
 
     public CommentCreationTransaction(
             CommentRepository commentRepository,
@@ -41,6 +44,11 @@ public class CommentCreationTransaction {
         this.petitionRepository = petitionRepository;
         this.userRepository = userRepository;
         this.clock = clock;
+    }
+
+    @Autowired
+    void setNotificationEventService(NotificationEventService service) {
+        this.notificationEventService = service;
     }
 
     @Transactional
@@ -59,6 +67,9 @@ public class CommentCreationTransaction {
         Comment parent = findParent(petitionId, parentCommentId);
         Comment comment = commentRepository.saveAndFlush(
                 Comment.create(petition, user, mapping, parent, content));
+        if (notificationEventService != null && comment.isReply()) {
+            notificationEventService.onReplyCreated(comment);
+        }
         return CommentResponse.from(comment, 0, userId, false);
     }
 

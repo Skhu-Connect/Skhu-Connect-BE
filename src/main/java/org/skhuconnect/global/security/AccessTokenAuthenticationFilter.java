@@ -22,6 +22,7 @@ public class AccessTokenAuthenticationFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String USER_ROLE = "USER";
     private static final String PETITION_PATH = "/connect/petitions";
+    private static final String NOTIFICATION_PATH = "/connect/notifications";
 
     private final JwtDecoder jwtDecoder;
 
@@ -34,8 +35,13 @@ public class AccessTokenAuthenticationFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         boolean petitionPath = path.equals(PETITION_PATH)
                 || path.startsWith(PETITION_PATH + "/");
-        if (!petitionPath) {
+        boolean notificationPath = path.equals(NOTIFICATION_PATH)
+                || path.startsWith(NOTIFICATION_PATH + "/");
+        if (!petitionPath && !notificationPath) {
             return true;
+        }
+        if (notificationPath) {
+            return false;
         }
         if (HttpMethod.GET.matches(request.getMethod())) {
             return path.equals(PETITION_PATH)

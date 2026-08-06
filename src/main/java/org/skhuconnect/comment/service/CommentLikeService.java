@@ -9,6 +9,8 @@ import org.skhuconnect.comment.repository.CommentLikeRepository;
 import org.skhuconnect.comment.repository.CommentRepository;
 import org.skhuconnect.user.entity.User;
 import org.skhuconnect.user.repository.UserRepository;
+import org.skhuconnect.notification.service.NotificationEventService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +21,7 @@ public class CommentLikeService {
     private final CommentLikeRepository commentLikeRepository;
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
+    private NotificationEventService notificationEventService;
 
     public CommentLikeService(
             CommentLikeRepository commentLikeRepository,
@@ -28,6 +31,11 @@ public class CommentLikeService {
         this.commentLikeRepository = commentLikeRepository;
         this.commentRepository = commentRepository;
         this.userRepository = userRepository;
+    }
+
+    @Autowired
+    void setNotificationEventService(NotificationEventService service) {
+        this.notificationEventService = service;
     }
 
     @Transactional
@@ -42,6 +50,9 @@ public class CommentLikeService {
             commentLikeRepository.saveAndFlush(CommentLike.create(comment, user));
         } catch (DataIntegrityViolationException exception) {
             throw new CommentException(Reason.COMMENT_LIKE_DUPLICATE);
+        }
+        if (notificationEventService != null) {
+            notificationEventService.onCommentLiked(comment, user);
         }
         return new CommentLikeResponse(
                 commentId, commentLikeRepository.countByCommentId(commentId), true);

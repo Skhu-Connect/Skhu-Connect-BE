@@ -9,6 +9,8 @@ import org.skhuconnect.petition.entity.Petition;
 import org.skhuconnect.petition.repository.PetitionRepository;
 import org.skhuconnect.user.entity.User;
 import org.skhuconnect.user.repository.UserRepository;
+import org.skhuconnect.notification.service.NotificationEventService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +25,7 @@ public class AgreementService {
     private final PetitionRepository petitionRepository;
     private final UserRepository userRepository;
     private final Clock clock;
+    private NotificationEventService notificationEventService;
 
     public AgreementService(
             AgreementRepository agreementRepository,
@@ -34,6 +37,11 @@ public class AgreementService {
         this.petitionRepository = petitionRepository;
         this.userRepository = userRepository;
         this.clock = clock;
+    }
+
+    @Autowired
+    void setNotificationEventService(NotificationEventService service) {
+        this.notificationEventService = service;
     }
 
     @Transactional
@@ -52,7 +60,11 @@ public class AgreementService {
         } catch (DataIntegrityViolationException exception) {
             throw new AgreementException(Reason.AGREEMENT_DUPLICATE);
         }
+        int previousCount = petition.getAgreementCount();
         petition.addAgreement(now);
+        if (notificationEventService != null) {
+            notificationEventService.onAgreementAdded(petition, previousCount);
+        }
         return AgreementResponse.from(petition);
     }
 

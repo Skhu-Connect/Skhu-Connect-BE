@@ -15,6 +15,8 @@ import org.skhuconnect.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.skhuconnect.notification.service.NotificationEventService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -27,6 +29,7 @@ public class AnonymousNumberRetryService {
     private final PetitionRepository petitionRepository;
     private final UserRepository userRepository;
     private final Clock clock;
+    private NotificationEventService notificationEventService;
 
     public AnonymousNumberRetryService(
             CommentRepository commentRepository,
@@ -40,6 +43,11 @@ public class AnonymousNumberRetryService {
         this.petitionRepository = petitionRepository;
         this.userRepository = userRepository;
         this.clock = clock;
+    }
+
+    @Autowired
+    void setNotificationEventService(NotificationEventService service) {
+        this.notificationEventService = service;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -61,6 +69,9 @@ public class AnonymousNumberRetryService {
         Comment parent = findParent(petitionId, parentCommentId);
         Comment comment = commentRepository.saveAndFlush(
                 Comment.create(petition, user, mapping, parent, content));
+        if (notificationEventService != null && comment.isReply()) {
+            notificationEventService.onReplyCreated(comment);
+        }
         return CommentResponse.from(comment, 0, userId, false);
     }
 

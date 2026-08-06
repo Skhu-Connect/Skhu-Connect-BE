@@ -321,6 +321,16 @@ POST /connect/auth/password/reset
 
 ## 16. 구현된 일반 사용자 인증 정책
 
+### 구현 완료 범위
+
+- 일반 사용자 로그인
+- JWT Access Token 발급
+- Refresh Token 발급·회전·폐기
+- 로그아웃
+- Access Token 인증 필터
+- 인증 사용자 식별(Request Attribute)
+- 공개 API의 선택적 JWT 인증
+
 ### API
 
 ```http
@@ -329,48 +339,69 @@ POST /connect/auth/token/refresh
 POST /connect/auth/logout
 ```
 
-- 로그인은 `loginId`와 SKHU Connect 비밀번호를 검증한다.
-- 로그인과 재발급은 Access Token과 `expiresInSeconds=1800`을 응답 본문으로 반환한다.
-- 로그아웃은 Refresh Token Cookie가 없거나 이미 폐기된 경우에도 `204 No Content`를 반환한다.
-
 ### Access Token
 
-- Access Token은 HS256으로 서명한 JWT이다.
+- HS256 JWT를 사용한다.
 - 유효기간은 30분이다.
-- `sub` claim은 User ID 문자열이다.
-- `role` claim은 `USER`이다.
-- `JWT_SECRET` 환경변수는 Base64 형식이어야 하며 디코딩 결과가 최소 32바이트여야 한다.
-- Access Token 원문은 데이터베이스나 로그에 저장하지 않는다.
+- `sub` Claim에는 User ID를 저장한다.
+- `role` Claim에는 `USER`를 저장한다.
+- Access Token 원문은 DB나 로그에 저장하지 않는다.
+
+### Access Token 인증
+
+- Access Token은 `AccessTokenAuthenticationFilter`에서 검증한다.
+- 검증 성공 시 요청 Attribute에 `userId`를 저장한다.
+- Service와 Controller는 `@RequestAttribute("userId")`를 사용하여 인증 사용자를 식별한다.
+- Request Body로 사용자 ID를 전달하지 않는다.
+
+### 공개 API 정책
+
+비로그인 접근 가능
+
+- 학과 목록 조회
+- 청원 목록 조회
+- 청원 상세 조회
+- 댓글 목록 조회
+
+댓글 목록 조회는 선택적 JWT를 지원한다.
+
+- 토큰 없음 → 익명 조회
+- 정상 토큰 → 사용자 기준(myComment, liked) 계산
+- 잘못된 토큰 → 401 Unauthorized
+
+그 외 변경 API는 모두 Access Token이 필요하다.
 
 ### Refresh Token
 
-- Refresh Token은 `SecureRandom`으로 생성한 256비트 opaque token이며 유효기간은 14일이다.
-- 데이터베이스에는 원문이 아닌 SHA-256 `token_hash`만 저장한다.
-- 사용자당 활성 Refresh Token은 최대 하나이다.
-- 로그인 시 기존 활성 토큰을 교체한다.
-- 재발급 시 비관적 락으로 기존 토큰을 조회하고 새 토큰으로 회전한다.
-- 로그아웃 시 활성 토큰을 삭제한다.
-- 활성 `refresh_tokens` 행에서 조회되지 않는 토큰은 위조·재사용·로그아웃 후 재사용을 구분하지 않고 `TOKEN_INVALID`로 처리한다.
-- 활성 행에서 만료가 확인된 경우에만 `TOKEN_EXPIRED`로 처리한다.
+- SecureRandom 기반 256bit opaque token
+- 유효기간 14일
+- DB에는 SHA-256 tokenHash만 저장한다.
+- 사용자당 활성 Refresh Token은 하나만 유지한다.
+- 로그인 시 기존 Token을 교체한다.
+- 재발급 시 기존 Token을 회전한다.
+- 로그아웃 시 삭제한다.
 
 ### Cookie
 
-- 이름: `refreshToken`
-- `HttpOnly`
-- `Path=/connect/auth`
-- `SameSite=Lax`
-- `Max-Age=1209600`
-- `Secure`는 `JWT_COOKIE_SECURE` 환경변수로 설정한다.
-- 로그아웃 시 동일한 이름·Path·SameSite·Secure 조건으로 `Max-Age=0`을 반환한다.
+- Name : refreshToken
+- HttpOnly
+- SameSite=Lax
+- Path=/connect/auth
+- Secure는 환경변수(JWT_COOKIE_SECURE)로 제어한다.
 
-### 현재 미구현 범위
+## 17. 현재 미구현 범위
 
-- Spring Security 전체 필터 체인은 아직 구현하지 않았다.
-- Access Token을 검증하여 요청 인증 정보를 구성하는 인증 필터는 아직 구현하지 않았다.
-- 관리자 로그인 및 관리자 Refresh Token 정책은 이번 일반 사용자 인증 구현 범위에 포함하지 않는다.
+다음 기능은 아직 구현되지 않았다.
 
-## 17. 후속 구현 사항
+- 관리자 로그인
+- 관리자 인증 및 권한 관리
+- 공식 답변(OfficialAnswer) 등록 API
+- 공식 답변 등록 시 Notification 연결
+- 관리자 웹
+- 사용자 정보·활동 내역 조회
+- 사용자 웹 통합 테스트
+- 최종 문서 정리
 
-- 비밀번호 재설정 API
-- Access Token 인증 필터와 Spring Security 필터 체인
-- 실제 운영 환경의 이메일 발송 제한 및 IP Rate Limit 수치
+Spring Security 전체 FilterChain은 아직 구성하지 않았지만,
+
+AccessTokenAuthenticationFilter를 통해 일반 사용자 인증은 정상 동작한다.

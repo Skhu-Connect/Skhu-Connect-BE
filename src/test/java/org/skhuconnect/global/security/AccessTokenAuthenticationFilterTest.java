@@ -185,6 +185,18 @@ class AccessTokenAuthenticationFilterTest {
         assertThat(response.getStatus()).isEqualTo(401);
         verify(filterChain, never()).doFilter(request, response);
     }
+    @Test
+    void notificationApisRequireToken() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "GET", "/connect/notifications");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        assertThat(response.getStatus()).isEqualTo(401);
+        verify(filterChain, never()).doFilter(request, response);
+    }
+
     private MockHttpServletRequest petitionRequest() {
         return new MockHttpServletRequest("POST", "/connect/petitions");
     }
