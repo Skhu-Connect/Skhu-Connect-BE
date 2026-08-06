@@ -108,6 +108,52 @@ class PetitionTest {
     }
 
     @Test
+    void agreementAtTargetTransitionsOnceAndSetsReviewStartedAt() {
+        LocalDateTime createdAt = LocalDateTime.of(2026, 8, 5, 12, 0);
+        LocalDateTime agreedAt = createdAt.plusHours(1);
+        Petition petition = Petition.create(
+                mock(User.class), PetitionCategory.FACILITY,
+                "title", "content", 1, createdAt);
+
+        petition.addAgreement(agreedAt);
+
+        assertThat(petition.getAgreementCount()).isEqualTo(1);
+        assertThat(petition.getStatus()).isEqualTo(PetitionStatus.UNDER_REVIEW);
+        assertThat(petition.getReviewStartedAt()).isEqualTo(agreedAt);
+        assertThatThrownBy(() -> petition.addAgreement(agreedAt.plusSeconds(1)))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(petition.getAgreementCount()).isEqualTo(1);
+        assertThat(petition.getReviewStartedAt()).isEqualTo(agreedAt);
+    }
+
+    @Test
+    void underReviewCannotAddOrCancelAgreement() {
+        LocalDateTime createdAt = LocalDateTime.of(2026, 8, 5, 12, 0);
+        Petition petition = Petition.create(
+                mock(User.class), PetitionCategory.FACILITY,
+                "title", "content", 1, createdAt);
+        petition.addAgreement(createdAt.plusHours(1));
+
+        assertThatThrownBy(() ->
+                petition.addAgreement(createdAt.plusHours(2)))
+                .isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() ->
+                petition.removeAgreement(createdAt.plusHours(2)))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void exactDeadlineIsNotAgreementOpen() {
+        LocalDateTime createdAt = LocalDateTime.of(2026, 8, 5, 12, 0);
+        Petition petition = createPetition(createdAt);
+
+        assertThat(petition.isAgreementOpenAt(
+                petition.getAgreementDeadline())).isFalse();
+        assertThatThrownBy(() ->
+                petition.addAgreement(petition.getAgreementDeadline()))
+                .isInstanceOf(IllegalStateException.class);
+    }
+    @Test
     void exposesFieldsWithoutSetters() throws Exception {
         assertThat(Arrays.stream(Petition.class.getMethods())
                 .map(Method::getName)

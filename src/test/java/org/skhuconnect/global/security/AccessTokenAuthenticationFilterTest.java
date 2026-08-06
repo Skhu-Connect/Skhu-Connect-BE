@@ -174,6 +174,17 @@ class AccessTokenAuthenticationFilterTest {
 
         assertThat(response.getStatus()).isEqualTo(401);
     }
+    @Test
+    void agreementWriteRequestRequiresToken() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "POST", "/connect/petitions/10/agreements");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        assertThat(response.getStatus()).isEqualTo(401);
+        verify(filterChain, never()).doFilter(request, response);
+    }
     private MockHttpServletRequest petitionRequest() {
         return new MockHttpServletRequest("POST", "/connect/petitions");
     }

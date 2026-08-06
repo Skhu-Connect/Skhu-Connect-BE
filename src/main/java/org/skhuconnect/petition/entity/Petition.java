@@ -140,6 +140,31 @@ public class Petition extends BaseEntity {
         this.deletedAt = Objects.requireNonNull(deletedAt, "deletedAt must not be null");
     }
 
+    public boolean isAgreementOpenAt(LocalDateTime now) {
+        return status == PetitionStatus.OPEN
+                && agreementDeadline.isAfter(
+                        Objects.requireNonNull(now, "now must not be null"))
+                && !hidden
+                && !deleted;
+    }
+
+    public void addAgreement(LocalDateTime agreedAt) {
+        if (!isAgreementOpenAt(agreedAt)) {
+            throw new IllegalStateException("petition is not agreeable");
+        }
+        agreementCount++;
+        if (agreementCount >= targetAgreementCount) {
+            status = PetitionStatus.UNDER_REVIEW;
+            reviewStartedAt = agreedAt;
+        }
+    }
+
+    public void removeAgreement(LocalDateTime canceledAt) {
+        if (!isAgreementOpenAt(canceledAt) || agreementCount <= 0) {
+            throw new IllegalStateException("petition agreement cannot be canceled");
+        }
+        agreementCount--;
+    }
     public boolean isWrittenBy(Long userId) {
         return writer.getId().equals(userId);
     }
