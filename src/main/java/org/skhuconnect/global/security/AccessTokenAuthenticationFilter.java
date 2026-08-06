@@ -52,6 +52,10 @@ public class AccessTokenAuthenticationFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (authorization == null || !authorization.startsWith(BEARER_PREFIX)) {
+            if (isPublicCommentListGet(request) && authorization == null) {
+                filterChain.doFilter(request, response);
+                return;
+            }
             unauthorized(response);
             return;
         }
@@ -72,6 +76,12 @@ public class AccessTokenAuthenticationFilter extends OncePerRequestFilter {
         } catch (JwtException | IllegalArgumentException exception) {
             unauthorized(response);
         }
+    }
+
+    private boolean isPublicCommentListGet(HttpServletRequest request) {
+        return HttpMethod.GET.matches(request.getMethod())
+                && request.getRequestURI().matches(
+                        PETITION_PATH + "/\\d+/comments");
     }
 
     private void unauthorized(HttpServletResponse response) throws IOException {

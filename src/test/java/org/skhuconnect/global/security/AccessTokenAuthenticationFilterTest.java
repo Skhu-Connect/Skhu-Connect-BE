@@ -167,7 +167,7 @@ class AccessTokenAuthenticationFilterTest {
     @Test
     void arbitraryPetitionSubPathIsNotPublic() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest(
-                "GET", "/connect/petitions/10/comments");
+                "GET", "/connect/petitions/10/unknown");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilter(request, response, filterChain);
