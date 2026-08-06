@@ -1,0 +1,11 @@
+package org.skhuconnect.notification.entity;
+
+public enum NotificationType {
+    PETITION_AGREEMENT_60_PERCENT,
+    PETITION_AGREEMENT_100_PERCENT,
+    PETITION_UNDER_REVIEW,
+    PETITION_ANSWERED,
+    COMMENT_REPLY,
+    COMMENT_LIKE,
+    REPLY_LIKE
+}

@@ -1,6 +1,6 @@
 # SKHU Connect ERD
 
-> Last Updated: 2026-08-04
+> Last Updated: 2026-08-06
 >
 > 본 문서는 SKHU Connect 백엔드의 MVP 데이터베이스 설계 기준이다.
 > Entity 구현과 데이터베이스 변경은 `ARCHITECTURE.md`, API 명세서, 본 문서를 기준으로 진행한다.
@@ -30,33 +30,34 @@
 
 # 2. 전체 Entity 목록
 
-MVP Entity는 다음과 같다.
+현재 코드에 `@Entity`로 구현된 Entity는 다음과 같다.
 
 ```text
 Department
 User
 EmailVerification
-Admin
 RefreshToken
 Petition
 Agreement
 Bookmark
 Comment
+PetitionAnonymousNumber
 CommentLike
 Notification
-OfficialAnswer
 ThresholdSetting
-NotificationLog
 ```
 
-다음 Entity는 현재 MVP ERD에서 제외한다.
+다음 항목은 후속 설계이며 현재 코드에 Entity가 없다.
 
 ```text
+Admin
+OfficialAnswer
+NotificationLog
 OfficialAnswerHistory
 ThresholdSettingHistory
 ```
 
-답변 수정 이력 API와 임계치 변경 이력 API를 MVP에서 구현하려면 별도 History Entity 설계가 필요하다.
+따라서 관리자·공식 답변·운영 알림 로그와 각 변경 이력은 현재 DB 스키마가 아니라 후속 구현 범위다.
 
 ---
 
@@ -69,6 +70,7 @@ User 1 ─── N Petition
 User 1 ─── N Agreement
 User 1 ─── N Bookmark
 User 1 ─── N Comment
+User 1 ─── N PetitionAnonymousNumber
 User 1 ─── N CommentLike
 User 1 ─── N Notification
 User 1 ─── 0..1 RefreshToken
@@ -82,8 +84,11 @@ Admin 1 ─── N ThresholdSetting Update
 Petition 1 ─── N Agreement
 Petition 1 ─── N Bookmark
 Petition 1 ─── N Comment
+Petition 1 ─── N PetitionAnonymousNumber
 Petition 1 ─── 0..1 OfficialAnswer
 Petition 1 ─── N Notification
+
+PetitionAnonymousNumber 1 ─── N Comment
 
 Comment 1 ─── N CommentLike
 ```
@@ -587,7 +592,8 @@ comments
 | `petition_id` | `BIGINT` | 불가 | FK | 청원 식별자 |
 | `writer_id` | `BIGINT` | 불가 | FK | 댓글 작성자 |
 | `content` | `VARCHAR(1000)` | 불가 |  | 댓글 내용 |
-| `anonymous_number` | `INT` | 가능 |  | 청원별 익명 번호 |
+| `anonymous_number_id` | `BIGINT` | 불가 | FK | 청원별 익명 번호 매핑 식별자 |
+| `parent_comment_id` | `BIGINT` | 가능 | FK, SELF REFERENCE | 원댓글 식별자, NULL이면 원댓글 |
 | `hidden` | `BOOLEAN` | 불가 | DEFAULT FALSE | 관리자 숨김 여부 |
 | `hidden_reason` | `VARCHAR(500)` | 가능 |  | 숨김 사유 |
 | `hidden_at` | `DATETIME(6)` | 가능 |  | 숨김 또는 숨김 해제 처리 시각 |
@@ -602,7 +608,9 @@ comments
 ```text
 User 1 : N Comment
 Petition 1 : N Comment
+PetitionAnonymousNumber 1 : N Comment
 Comment 1 : N CommentLike
+Comment 1 : N Comment (parent_comment_id 자기참조)
 ```
 
 ## 제약조건
@@ -610,18 +618,23 @@ Comment 1 : N CommentLike
 ```text
 FOREIGN KEY(petition_id) REFERENCES petitions(id)
 FOREIGN KEY(writer_id) REFERENCES users(id)
+FOREIGN KEY(anonymous_number_id) REFERENCES petition_anonymous_numbers(id)
+FOREIGN KEY(parent_comment_id) REFERENCES comments(id)
 FOREIGN KEY(hidden_by_admin_id) REFERENCES admins(id)
 ```
 
 ## 익명 처리 규칙
 
-- 청원 작성자가 작성한 댓글은 `익명(작성자)`로 표시한다.
-- 청원 작성자의 댓글은 `anonymous_number`를 사용하지 않는다.
-- 다른 사용자는 청원별 최초 댓글 작성 순서에 따라 `익명1`, `익명2` 형태로 표시한다.
-- 같은 사용자는 같은 청원에서 동일한 `anonymous_number`를 사용한다.
-- 다른 청원에서는 새로운 익명 번호를 부여한다.
-- 실제 사용자 ID와 이메일은 사용자 댓글 응답에 반환하지 않는다.
-- 익명 번호는 Comment Service에서 기존 댓글을 조회하여 재사용한다.
+- 청원 작성자를 포함한 모든 댓글 작성자는 청원별 익명 번호를 부여받는다.
+- 번호는 각 청원에서 1번부터 순차적으로 부여한다.
+- 동일 사용자는 동일 청원에서 항상 같은 번호를 사용한다.
+- 다른 청원에서는 별도 번호를 부여한다.
+- 댓글을 삭제한 뒤 다시 작성해도 기존 번호를 재사용한다.
+- Comment에는 익명 번호 정수값을 직접 저장하지 않는다.
+- Comment는 `anonymous_number_id`로 `PetitionAnonymousNumber` 매핑을 참조한다.
+- 댓글 응답에는 작성자 식별값으로 `anonymousNumber`만 반환한다.
+- 사용자 ID, 이메일, 로그인 ID 등 실제 사용자 식별 정보는 반환하지 않는다.
+- 기존 `익명(작성자)` 예외와 Comment의 `anonymous_number` 직접 저장 방식은 폐기한다.
 
 ## 비즈니스 규칙
 
@@ -629,12 +642,88 @@ FOREIGN KEY(hidden_by_admin_id) REFERENCES admins(id)
 - 작성자는 자신의 댓글을 수정·삭제할 수 있다.
 - 사용자 삭제는 `deleted`, 관리자 숨김은 `hidden`으로 구분한다.
 - 숨김 댓글은 원문 대신 숨김 안내 문구를 반환한다.
-- `EXPIRED` 청원에는 새로운 댓글을 작성할 수 없다.
+- `OPEN`, `UNDER_REVIEW`, `ANSWERED` 상태에서는 새로운 댓글을 작성할 수 있다.
+- `EXPIRED` 상태에서는 새로운 댓글을 작성할 수 없다.
 - 숨김 또는 삭제된 청원에는 새로운 댓글을 작성할 수 없다.
 
-`ANSWERED` 상태에서 댓글 작성을 허용할지는 아직 확정되지 않았다.
-
 삭제된 댓글의 사용자 화면 표시 방식은 아직 확정되지 않았다.
+
+---
+
+# 12.1 PetitionAnonymousNumber
+
+청원별 사용자 익명 번호 매핑을 영구 관리한다.
+
+## 테이블명
+
+```text
+petition_anonymous_numbers
+```
+
+## 컬럼
+
+| 컬럼 | 타입 | Null | 제약조건 | 설명 |
+|---|---|---:|---|---|
+| `id` | `BIGINT` | 불가 | PK, AUTO_INCREMENT | 익명 번호 매핑 식별자 |
+| `petition_id` | `BIGINT` | 불가 | FK, 복합 UNIQUE | 청원 식별자 |
+| `user_id` | `BIGINT` | 불가 | FK, 복합 UNIQUE | 사용자 식별자 |
+| `anonymous_number` | `INT` | 불가 | 복합 UNIQUE | 해당 청원에서 표시할 익명 번호 |
+| `created_at` | `DATETIME(6)` | 불가 |  | 최초 번호 발급 시각 |
+| `updated_at` | `DATETIME(6)` | 불가 |  | 수정 시각 |
+
+## 관계
+
+```text
+Petition 1 : N PetitionAnonymousNumber
+User 1 : N PetitionAnonymousNumber
+PetitionAnonymousNumber 1 : N Comment
+```
+
+## 제약조건
+
+```text
+UNIQUE(petition_id, user_id)
+UNIQUE(petition_id, anonymous_number)
+FOREIGN KEY(petition_id) REFERENCES petitions(id)
+FOREIGN KEY(user_id) REFERENCES users(id)
+```
+
+- `(petition_id, user_id)`는 동일 사용자의 번호 재발급과 중복 매핑을 방지한다.
+- `(petition_id, anonymous_number)`는 같은 청원 안에서 번호 중복을 방지한다.
+- `anonymous_number`는 1 이상의 정수이다.
+- 매핑은 댓글 삭제와 무관하게 영구 보존하며 Comment 삭제에 cascade되지 않는다.
+- `Comment.petition_id`는 참조하는 `PetitionAnonymousNumber.petition_id`와 같아야 한다.
+- `Comment.writer_id`는 참조하는 `PetitionAnonymousNumber.user_id`와 같아야 한다.
+- Comment 생성 요청에서는 `anonymousNumberId`, `anonymousNumber`, `writerId`를 클라이언트 입력으로 받지 않는다.
+- 서버는 Access Token의 인증 사용자와 경로의 `petition_id`를 기준으로 매핑을 조회하거나 발급하고, 해당 매핑만 Comment 생성에 사용한다.
+- 사용자 탈퇴나 청원 삭제 시 매핑 보존·비식별화 정책은 해당 기능 구현 전에 별도로 확정한다.
+
+## 번호 발급 및 댓글 저장 트랜잭션
+
+새 댓글 작성은 다음 순서를 하나의 트랜잭션에서 처리한다.
+
+```text
+1. petition_id로 Petition을 PESSIMISTIC_WRITE 잠금 조회한다.
+2. 청원이 댓글 작성 가능한 상태인지 검증한다.
+3. (petition_id, user_id)로 기존 매핑을 조회한다.
+4. 기존 매핑이 있으면 해당 anonymous_number를 재사용한다.
+5. 기존 매핑이 없으면 같은 petition_id의 MAX(anonymous_number)를 조회한다.
+6. 조회 결과가 없으면 1, 있으면 MAX + 1을 새 번호로 결정한다.
+7. PetitionAnonymousNumber를 저장하고 즉시 flush한다.
+8. 저장된 매핑을 anonymous_number_id로 참조하는 Comment를 저장한다.
+9. 트랜잭션을 커밋하고 Petition 잠금을 해제한다.
+```
+
+- 같은 청원의 번호 발급 요청은 동일 Petition 행 잠금에서 직렬화된다.
+- 서로 다른 청원의 요청은 서로 다른 Petition 행을 잠그므로 병렬 처리할 수 있다.
+- 기존 매핑 조회도 Petition 잠금을 획득한 뒤 수행하여 조회와 신규 발급 사이 경쟁을 막는다.
+- 두 Unique 제약조건은 잠금 누락이나 예외적인 경합 시 중복 저장을 차단하는 최종 안전장치이다.
+- Unique 위반이 발생하면 현재 트랜잭션을 롤백한다.
+- 새 트랜잭션에서 Petition을 다시 `PESSIMISTIC_WRITE`로 잠근다.
+- `(petition_id, user_id)` 매핑을 1회 재조회한다.
+- 매핑이 있으면 해당 번호로 댓글 생성을 1회 재시도한다.
+- 매핑이 없으면 새로운 번호를 다시 발급하지 않고 동시성 충돌 오류로 종료한다.
+- 반복 재시도나 무한 루프는 사용하지 않는다.
 
 ---
 
@@ -663,6 +752,7 @@ comment_likes
 ```text
 User 1 : N CommentLike
 Comment 1 : N CommentLike
+Comment 1 : N Comment (parent_comment_id 자기참조)
 ```
 
 ## 제약조건
@@ -674,18 +764,16 @@ FOREIGN KEY(user_id) REFERENCES users(id)
 ```
 
 ## 비즈니스 규칙
-
 - 사용자 한 명은 댓글 하나에 한 번만 공감할 수 있다.
 - 공감한 댓글에는 공감을 취소할 수 있다.
 - 숨김 또는 삭제된 댓글에는 새로운 공감을 등록할 수 없다.
-
-만료 청원의 기존 댓글에 공감할 수 있는지는 아직 확정되지 않았다.
+- `OPEN`, `UNDER_REVIEW`, `ANSWERED`, `EXPIRED` 상태의 기존 댓글에는 공감 및 공감 취소가 가능하다.
 
 ---
 
 # 14. Notification
 
-사용자 웹 알림을 관리한다.
+사용자 웹 알림을 관리한다. `Notification` Entity와 목록·미읽음·읽음 처리는 구현되어 있으며, 공식 답변 등록 흐름이 없어 `PETITION_ANSWERED` 이벤트 호출은 아직 연결되지 않았다.
 
 ## 테이블명
 
@@ -698,11 +786,11 @@ notifications
 | 컬럼 | 타입 | Null | 제약조건 | 설명 |
 |---|---|---:|---|---|
 | `id` | `BIGINT` | 불가 | PK, AUTO_INCREMENT | 알림 식별자 |
-| `user_id` | `BIGINT` | 불가 | FK | 알림 수신 사용자 |
+| `receiver_id` | `BIGINT` | 불가 | FK | 알림 수신 사용자 |
 | `petition_id` | `BIGINT` | 가능 | FK | 관련 청원 |
+| `comment_id` | `BIGINT` | 가능 | FK | 관련 댓글 또는 대댓글 |
 | `type` | `VARCHAR(50)` | 불가 |  | 사용자 알림 유형 |
-| `title` | `VARCHAR(150)` | 불가 |  | 알림 제목 |
-| `content` | `VARCHAR(500)` | 불가 |  | 알림 내용 |
+| `event_key` | `VARCHAR(150)` | 불가 | UNIQUE | 동일 이벤트 중복 방지 키 |
 | `is_read` | `BOOLEAN` | 불가 | DEFAULT FALSE | 읽음 여부 |
 | `read_at` | `DATETIME(6)` | 가능 |  | 읽은 시각 |
 | `created_at` | `DATETIME(6)` | 불가 |  | 생성 시각 |
@@ -713,13 +801,16 @@ notifications
 ```text
 User 1 : N Notification
 Petition 1 : N Notification
+Comment 1 : N Notification
 ```
 
 ## 제약조건
 
 ```text
-FOREIGN KEY(user_id) REFERENCES users(id)
+FOREIGN KEY(receiver_id) REFERENCES users(id)
 FOREIGN KEY(petition_id) REFERENCES petitions(id)
+FOREIGN KEY(comment_id) REFERENCES comments(id)
+UNIQUE(event_key)
 ```
 
 ## 비즈니스 규칙
@@ -729,9 +820,9 @@ FOREIGN KEY(petition_id) REFERENCES petitions(id)
 - 전체 읽음 처리 시 사용자의 읽지 않은 알림을 모두 변경한다.
 - 읽은 알림도 목록에서 유지한다.
 - 웹 브라우저 Push 알림은 MVP에서 제외한다.
-- `notification_enabled`가 비활성화된 사용자에게 생성할 알림 범위는 구현 전 확인한다.
+- `notification_enabled=false`인 사용자에게는 새 알림을 생성하지 않는다.
 
-사용자 알림 유형과 수신 대상의 세부 정책은 API 구현 Issue에서 확정한다.
+사용자 알림 유형과 수신 대상은 본 문서의 사용자 알림 확정 정책을 따른다.
 
 ---
 
@@ -1016,7 +1107,17 @@ INDEX ix_bookmarks_user_id_created_at (user_id, created_at)
 ```text
 INDEX ix_comments_petition_id_created_at (petition_id, created_at)
 INDEX ix_comments_writer_id_created_at (writer_id, created_at)
+INDEX ix_comments_anonymous_number_id (anonymous_number_id)
+INDEX ix_comments_parent_comment_id_created_at (parent_comment_id, created_at)
 INDEX ix_comments_hidden_deleted (hidden, deleted)
+```
+
+## PetitionAnonymousNumber
+
+```text
+UNIQUE INDEX ux_petition_anonymous_numbers_petition_user (petition_id, user_id)
+UNIQUE INDEX ux_petition_anonymous_numbers_petition_number (petition_id, anonymous_number)
+INDEX ix_petition_anonymous_numbers_user_id (user_id)
 ```
 
 ## CommentLike
@@ -1028,8 +1129,10 @@ UNIQUE INDEX ux_comment_likes_comment_user (comment_id, user_id)
 ## Notification
 
 ```text
-INDEX ix_notifications_user_created_at (user_id, created_at)
-INDEX ix_notifications_user_read (user_id, is_read)
+UNIQUE INDEX ux_notifications_event_key (event_key)
+INDEX ix_notifications_receiver_read_created (receiver_id, is_read, created_at)
+INDEX ix_notifications_petition_id (petition_id)
+INDEX ix_notifications_comment_id (comment_id)
 ```
 
 ## OfficialAnswer
@@ -1097,17 +1200,16 @@ hidden_by_admin_id = 처리 관리자
 | 기능 | OPEN | UNDER_REVIEW | ANSWERED | EXPIRED |
 |---|---:|---:|---:|---:|
 | 청원 조회 | 가능 | 가능 | 가능 | 가능 |
-| 신규 동의 | 가능 | 가능 | 미확정 | 불가 |
+| 신규 동의 | 가능 | 가능 | 불가 | 불가 |
 | 동의 취소 | 가능 | 불가 | 불가 | 불가 |
 | 댓글 조회 | 가능 | 가능 | 가능 | 가능 |
-| 댓글 작성 | 가능 | 가능 | 미확정 | 불가 |
-| 댓글 공감 | 가능 | 가능 | 미확정 | 미확정 |
+| 댓글 작성 | 가능 | 가능 | 가능 | 불가 |
+| 댓글 공감 | 가능 | 가능 | 가능 | 가능 |
 | 북마크 | 가능 | 가능 | 가능 | 가능 |
 | 청원 수정 | 동의 0명일 때 가능 | 불가 | 불가 | 불가 |
 | 청원 삭제 | 동의 0명일 때 가능 | 불가 | 불가 | 불가 |
 | 공식 답변 등록 | 불가 | 가능 | 불가 | 원칙상 불가 |
 | 공식 답변 수정 | 해당 없음 | 해당 없음 | 가능 | 해당 없음 |
-
 숨김 또는 사용자 삭제 상태에서는 상태값과 관계없이 새로운 참여 기능을 차단한다.
 
 ---
@@ -1170,34 +1272,29 @@ GET /connect/admin/petitions/{petitionId}/answer/history
 GET /connect/admin/threshold-settings/history
 ```
 
-## 21.6 익명 번호 동시성
+## 21.6 익명 번호 동시성 확정
 
-현재는 Comment의 `anonymous_number`를 기존 댓글을 조회하여 재사용하는 방식이다.
+익명 번호 동시성 정책은 다음과 같이 확정하였다.
 
-같은 청원에 여러 사용자가 동시에 첫 댓글을 작성할 때 번호가 충돌하지 않도록 트랜잭션 또는 별도 익명 매핑 Entity가 필요할 수 있다.
+- 별도 `PetitionAnonymousNumber` Entity와 테이블을 사용한다.
+- Petition 행 `PESSIMISTIC_WRITE` 잠금으로 같은 청원의 신규 번호 발급을 직렬화한다.
+- `(petition_id, user_id)`와 `(petition_id, anonymous_number)` Unique 제약조건을 적용한다.
+- Comment는 번호를 직접 저장하지 않고 매핑 FK를 참조한다.
+- 매핑은 댓글 삭제 후에도 영구 보존한다.
 
-별도 `PetitionAnonymous` Entity 도입 여부는 확정되지 않았다.
+상세 트랜잭션 순서는 `12.1 PetitionAnonymousNumber`를 따른다.
 
 ## 21.7 상태별 동작
 
-다음 정책은 아직 확정되지 않았다.
+다음 정책은 아직 미확정이다.
 
-- `ANSWERED` 청원의 신규 동의 가능 여부
-- `ANSWERED` 청원의 댓글 작성 가능 여부
-- `ANSWERED` 청원의 댓글 공감 가능 여부
-- `EXPIRED` 청원의 기존 댓글 공감 가능 여부
 - 사용자 삭제 댓글의 화면 표시 방식
 - 삭제된 청원의 관리자 화면 노출 여부
 - 숨김 해제 시 기존 숨김 사유 보존 여부
 
 ## 21.8 사용자 알림 정책
 
-알림 Entity는 정의되어 있지만 다음 사항은 아직 확정되지 않았다.
-
-- 알림 유형 전체 목록
-- 유형별 수신 대상
-- 동의 수 구간 알림 여부
-- 알림 설정을 비활성화했을 때 생성하지 않을 알림 범위
+사용자 알림 유형, 수신 대상, 중복 방지, 읽음 및 조회 정책은 Notification 절과 실제 Notification 코드에 구현되어 있다. 공식 답변 알림의 호출 연결은 후속 범위다.
 
 ---
 
@@ -1215,3 +1312,23 @@ Codex는 다음 원칙을 따른다.
 8. 실제 사용자 정보는 일반 사용자 API에 반환하지 않는다.
 9. 데이터베이스 변경 사항을 작업 완료 보고서에 전부 명시한다.
 10. 구현 완료 후 관련 테스트와 전체 빌드를 실제로 실행한다.
+
+## Comment 대댓글 정책
+
+- `parent_comment_id IS NULL`은 원댓글, 값이 있으면 대댓글이다.
+- 부모 댓글은 같은 `petition_id`의 원댓글이어야 하며 자기참조 깊이는 1단계로 제한한다.
+- 삭제·숨김 부모에는 새 대댓글을 생성하지 않는다.
+- 원댓글 삭제 시 대댓글은 cascade 삭제하지 않는다. 활성 대댓글이 존재하면 삭제 원댓글을 안내 문구와 함께 유지하고, 없으면 조회에서 제외한다.
+- 원댓글 페이지 조회 후 `parent_comment_id IN (...)`으로 대댓글을 일괄 조회하며 부모별로 그룹핑한다.
+- 원댓글과 대댓글은 각각 `created_at ASC, id ASC`로 정렬한다.
+- 원댓글 응답은 `replies` 배열을 포함하고, 대댓글 응답은 `parentCommentId`를 포함하며 중첩 `replies`는 두지 않는다.
+- 대댓글은 원댓글과 같은 `PetitionAnonymousNumber` 체계를 사용한다. 기존 매핑은 재사용하고 최초 활동 사용자는 기존 발급 정책으로 새 매핑을 발급한다.
+## 사용자 알림 확정 정책
+
+- 유형은 `PETITION_AGREEMENT_60_PERCENT`, `PETITION_AGREEMENT_100_PERCENT`, `PETITION_UNDER_REVIEW`, `PETITION_ANSWERED`, `COMMENT_REPLY`, `COMMENT_LIKE`, `REPLY_LIKE`이다.
+- 청원 작성자는 60%, 100%, 검토 시작, 공식 답변 알림을 받는다.
+- 청원 동의자는 검토 시작과 공식 답변 알림을 받되 작성자는 중복 수신하지 않는다.
+- 원댓글 작성자는 대댓글과 원댓글 공감 알림을, 대댓글 작성자는 대댓글 공감 알림을 받는다.
+- 자기 이벤트와 `notification_enabled=false` 수신자에게는 생성하지 않는다.
+- `event_key`로 이벤트별·수신자별 최초 1회 생성을 보장한다.
+- 알림은 삭제하지 않으며 개별·전체 읽음, 최신순 목록, 읽지 않은 개수 조회를 지원한다.
