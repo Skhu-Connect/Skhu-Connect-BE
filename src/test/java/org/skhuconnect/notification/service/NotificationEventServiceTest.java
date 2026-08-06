@@ -47,5 +47,18 @@ class NotificationEventServiceTest {
         service.onCommentLiked(root,owner);
         verify(notifications,times(3)).saveAndFlush(any(Notification.class));
     }
+    @Test void disabledReceiverDoesNotReceiveNotification() {
+        User writer=user(1L);
+        when(writer.isNotificationEnabled()).thenReturn(false);
+        Petition petition=mock(Petition.class);
+        when(petition.getId()).thenReturn(10L);
+        when(petition.getWriter()).thenReturn(writer);
+        when(petition.getAgreementCount()).thenReturn(5);
+        when(petition.getTargetAgreementCount()).thenReturn(10);
+
+        service.onAgreementAdded(petition,5);
+
+        verify(notifications,never()).saveAndFlush(any());
+    }
     private User user(long id){ User u=mock(User.class); when(u.getId()).thenReturn(id); when(u.isNotificationEnabled()).thenReturn(true); return u; }
 }

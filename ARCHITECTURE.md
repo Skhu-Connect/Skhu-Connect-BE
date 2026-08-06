@@ -1,7 +1,7 @@
 # SKHU Connect Architecture
 
-> Last Updated: 2026-08-06
-> 기준: 로컬 `dev` 커밋 `3934d63`; `feat/19-user-notification`은 미커밋 진행 중
+> Last Updated: 2026-08-07
+> 기준: 로컬 `dev` 커밋 `21e4b33`; Notification과 사용자 정보·활동 조회 구현 포함
 
 ## 1. 서비스와 현재 상태
 
@@ -17,14 +17,12 @@ SKHU Connect는 성공회대학교 학생 청원 플랫폼이다. 학생은 학�
 - Agreement 등록·취소와 상태 전환
 - Bookmark
 - Comment, CommentLike, PetitionAnonymousNumber, 1단계 Reply
+- Notification Entity/API와 60%·100%·검토 시작·댓글 공감·대댓글 이벤트
+- JWT `userId` 기반 내 정보와 작성 청원·동의·북마크·댓글·알림 조회
 
-### 진행 중
+### 미구현·후속 범위
 
-`feat/19-user-notification`에서 Notification 문서와 코드를 작업 중이다. Entity/API, 60%·100%·검토 시작, 댓글 공감·대댓글 이벤트 연결 코드가 작업 트리에 있으나 전체 검증 전이다. 공식 답변 등록 API가 없어 `ANSWERED` 알림 호출 지점은 미연결이다.
-
-### 후속 범위
-
-공식 답변·관리자 웹, 사용자 정보·활동 내역, 사용자 웹 통합 테스트, 배포가 남아 있다.
+공식 답변 등록과 `PETITION_ANSWERED` 실제 호출 연결, 관리자 인증·관리자 웹, 알림 수신 설정 변경 API, 브라우저 Push 알림, 배포가 남아 있다.
 
 ## 2. 기술 구조
 
@@ -123,7 +121,7 @@ OPEN --30일 내 미달성--> EXPIRED
 
 ## 9. 사용자 알림 정책
 
-정책은 확정되었고 구현은 `feat/19-user-notification`에서 검증 중이다.
+Notification Entity, 조회·읽음 API와 주요 이벤트 연결이 `dev`에 구현되어 있다. 공식 답변 등록 흐름이 없으므로 `PETITION_ANSWERED` 호출만 미연결이다.
 
 유형과 수신자:
 
@@ -146,7 +144,7 @@ OPEN --30일 내 미달성--> EXPIRED
 - 클릭 이동을 위해 nullable `petition_id`, `comment_id` 저장
 - 공식 답변 기능 구현 시 답변 저장과 `ANSWERED` 전환 트랜잭션에서 `onPetitionAnswered`를 호출해야 한다.
 
-진행 중 API:
+구현 API:
 
 ```text
 GET   /connect/notifications
@@ -154,6 +152,15 @@ GET   /connect/notifications/unread-count
 PATCH /connect/notifications/{notificationId}/read
 PATCH /connect/notifications/read-all
 ```
+
+## 9.1 사용자 정보·활동 조회 정책
+
+- 모든 API는 Access Token이 필요하며 JWT `sub`에서 얻은 `userId`만 사용한다.
+- `GET /connect/users/me`는 이메일, 로그인 ID, 학과 코드·이름, 알림 수신 여부를 반환하고 DB PK와 비밀번호는 반환하지 않는다.
+- `/connect/users/me/petitions`, `/agreements`, `/bookmarks`, `/comments`, `/notifications`는 본인 데이터만 조회한다.
+- 청원 활동은 hidden/deleted 청원을 제외하고 기존 `PetitionQueryResponse`의 유효 상태 계산을 재사용한다.
+- 댓글 활동은 삭제 댓글과 hidden/deleted 청원을 제외한다. 숨김 댓글은 기존 댓글 응답의 안내 문구 정책을 따른다.
+- 기본 페이지는 `page=0,size=20`, 허용 크기는 1..100이며 `createdAt DESC,id DESC`로 정렬한다.
 
 ## 10. Git과 개발 흐름
 

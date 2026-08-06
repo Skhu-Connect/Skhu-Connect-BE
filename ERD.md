@@ -30,13 +30,12 @@
 
 # 2. 전체 Entity 목록
 
-MVP Entity는 다음과 같다.
+현재 코드에 `@Entity`로 구현된 Entity는 다음과 같다.
 
 ```text
 Department
 User
 EmailVerification
-Admin
 RefreshToken
 Petition
 Agreement
@@ -45,19 +44,20 @@ Comment
 PetitionAnonymousNumber
 CommentLike
 Notification
-OfficialAnswer
 ThresholdSetting
-NotificationLog
 ```
 
-다음 Entity는 현재 MVP ERD에서 제외한다.
+다음 항목은 후속 설계이며 현재 코드에 Entity가 없다.
 
 ```text
+Admin
+OfficialAnswer
+NotificationLog
 OfficialAnswerHistory
 ThresholdSettingHistory
 ```
 
-답변 수정 이력 API와 임계치 변경 이력 API를 MVP에서 구현하려면 별도 History Entity 설계가 필요하다.
+따라서 관리자·공식 답변·운영 알림 로그와 각 변경 이력은 현재 DB 스키마가 아니라 후속 구현 범위다.
 
 ---
 
@@ -773,7 +773,7 @@ FOREIGN KEY(user_id) REFERENCES users(id)
 
 # 14. Notification
 
-사용자 웹 알림을 관리한다.
+사용자 웹 알림을 관리한다. `Notification` Entity와 목록·미읽음·읽음 처리는 구현되어 있으며, 공식 답변 등록 흐름이 없어 `PETITION_ANSWERED` 이벤트 호출은 아직 연결되지 않았다.
 
 ## 테이블명
 
@@ -1294,7 +1294,7 @@ GET /connect/admin/threshold-settings/history
 
 ## 21.8 사용자 알림 정책
 
-사용자 알림 유형, 수신 대상, 중복 방지, 읽음 및 조회 정책은 Notification 절로 확정하였다.
+사용자 알림 유형, 수신 대상, 중복 방지, 읽음 및 조회 정책은 Notification 절과 실제 Notification 코드에 구현되어 있다. 공식 답변 알림의 호출 연결은 후속 범위다.
 
 ---
 

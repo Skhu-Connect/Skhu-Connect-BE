@@ -73,6 +73,24 @@ class AccessTokenAuthenticationFilterTest {
     }
 
     @Test
+    void expiredTokenReturnsUnauthorized() throws Exception {
+        MockHttpServletRequest request = petitionRequest();
+        request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer expired-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        when(jwtDecoder.decode("expired-token")).thenThrow(
+                new JwtValidationException(
+                        "token expired",
+                        List.of(new OAuth2Error("invalid_token"))));
+
+        filter.doFilter(request, response, filterChain);
+
+        assertThat(response.getStatus()).isEqualTo(401);
+        assertThat(response.getContentType())
+                .isEqualTo("application/problem+json");
+        verify(filterChain, never()).doFilter(request, response);
+    }
+
+    @Test
     void nonUserRoleReturnsUnauthorized() throws Exception {
         MockHttpServletRequest request = petitionRequest();
         request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer admin-token");
