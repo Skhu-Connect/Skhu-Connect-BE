@@ -159,30 +159,31 @@ class PetitionRepositoryTest {
     void statusBoundaryAndStoredStatusesAreFilteredExactly() {
         User writer = saveWriter();
         LocalDateTime now = LocalDateTime.of(2026, 8, 5, 12, 0);
+        String keyword = "status-boundary-" + UUID.randomUUID();
         Petition boundaryOpen = petitionRepository.save(Petition.create(
-                writer, PetitionCategory.SCHOLARSHIP, "boundary", "content",
+                writer, PetitionCategory.SCHOLARSHIP, keyword + "-boundary", "content",
                 10, now.minusDays(30)));
         Petition underReview = Petition.create(
-                writer, PetitionCategory.SCHOLARSHIP, "review", "content",
+                writer, PetitionCategory.SCHOLARSHIP, keyword + "-review", "content",
                 10, now);
         ReflectionTestUtils.setField(
                 underReview, "status", PetitionStatus.UNDER_REVIEW);
         petitionRepository.save(underReview);
         Petition answered = Petition.create(
-                writer, PetitionCategory.SCHOLARSHIP, "answered", "content",
+                writer, PetitionCategory.SCHOLARSHIP, keyword + "-answered", "content",
                 10, now);
         ReflectionTestUtils.setField(answered, "status", PetitionStatus.ANSWERED);
         petitionRepository.saveAndFlush(answered);
 
         var open = petitionRepository.findAll(PetitionSpecification.query(
-                new PetitionQueryCondition(null, null, PetitionStatus.OPEN), now));
+                new PetitionQueryCondition(keyword, null, PetitionStatus.OPEN), now));
         var expired = petitionRepository.findAll(PetitionSpecification.query(
-                new PetitionQueryCondition(null, null, PetitionStatus.EXPIRED), now));
+                new PetitionQueryCondition(keyword, null, PetitionStatus.EXPIRED), now));
         var review = petitionRepository.findAll(PetitionSpecification.query(
                 new PetitionQueryCondition(
-                        null, null, PetitionStatus.UNDER_REVIEW), now));
+                        keyword, null, PetitionStatus.UNDER_REVIEW), now));
         var answer = petitionRepository.findAll(PetitionSpecification.query(
-                new PetitionQueryCondition(null, null, PetitionStatus.ANSWERED), now));
+                new PetitionQueryCondition(keyword, null, PetitionStatus.ANSWERED), now));
 
         assertThat(open).extracting(Petition::getId)
                 .contains(boundaryOpen.getId());

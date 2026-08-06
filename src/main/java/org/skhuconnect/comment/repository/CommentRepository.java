@@ -32,6 +32,17 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     @EntityGraph(attributePaths = {"petition", "writer", "anonymousNumber", "parentComment"})
     Optional<Comment> findByIdAndPetitionIdAndDeletedFalse(Long id, Long petitionId);
 
+    @EntityGraph(attributePaths = {"petition", "anonymousNumber", "parentComment"})
+    @Query("""
+            select comment from Comment comment
+            where comment.writer.id = :userId
+              and comment.deleted = false
+              and comment.petition.deleted = false
+              and comment.petition.hidden = false
+            """)
+    Page<Comment> findVisibleActivityByWriterId(
+            @Param("userId") Long userId, Pageable pageable);
+
     @Transactional
     long deleteAllByPetitionId(Long petitionId);
 }

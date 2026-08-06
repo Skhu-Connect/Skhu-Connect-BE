@@ -197,6 +197,33 @@ class AccessTokenAuthenticationFilterTest {
         verify(filterChain, never()).doFilter(request, response);
     }
 
+    @Test
+    void userActivityApisRequireToken() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "GET", "/connect/users/me/petitions");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        assertThat(response.getStatus()).isEqualTo(401);
+        verify(filterChain, never()).doFilter(request, response);
+    }
+
+    @Test
+    void validUserTokenInjectsUserIdIntoUserActivityRequest() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "GET", "/connect/users/me");
+        request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer valid-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        when(jwtDecoder.decode("valid-token")).thenReturn(userJwt("42", "USER"));
+
+        filter.doFilter(request, response, filterChain);
+
+        assertThat(request.getAttribute(
+                AccessTokenAuthenticationFilter.USER_ID_ATTRIBUTE)).isEqualTo(42L);
+        verify(filterChain).doFilter(request, response);
+    }
+
     private MockHttpServletRequest petitionRequest() {
         return new MockHttpServletRequest("POST", "/connect/petitions");
     }

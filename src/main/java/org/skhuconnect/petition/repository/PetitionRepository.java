@@ -2,6 +2,8 @@ package org.skhuconnect.petition.repository;
 
 import jakarta.persistence.LockModeType;
 import org.skhuconnect.petition.entity.Petition;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
@@ -16,6 +18,15 @@ public interface PetitionRepository extends JpaRepository<Petition, Long>,
     Optional<Petition> findByIdAndDeletedFalse(Long id);
 
     Optional<Petition> findByIdAndDeletedFalseAndHiddenFalse(Long id);
+
+    @Query("""
+            select petition from Petition petition
+            where petition.writer.id = :userId
+              and petition.deleted = false
+              and petition.hidden = false
+            """)
+    Page<Petition> findVisibleByWriterId(
+            @Param("userId") Long userId, Pageable pageable);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""

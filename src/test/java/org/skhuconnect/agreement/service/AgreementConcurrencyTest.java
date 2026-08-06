@@ -57,10 +57,12 @@ class AgreementConcurrencyTest {
         Petition petition = null;
         try {
             for (int index = 0; index < 6; index++) {
-                users.add(userRepository.saveAndFlush(User.create(
+                User user = User.create(
                         index + unique + "@office.skhu.ac.kr",
                         "c" + index + unique.substring(0, 10),
-                        "encoded", department)));
+                        "encoded", department);
+                user.changeNotificationEnabled(false);
+                users.add(userRepository.saveAndFlush(user));
             }
             petition = petitionRepository.saveAndFlush(Petition.create(
                     users.get(0), PetitionCategory.FACILITY,
