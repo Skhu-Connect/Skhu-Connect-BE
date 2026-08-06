@@ -1,6 +1,6 @@
 # SKHU Connect Backend Architecture
 
-> Last Updated: 2026-08-04
+> Last Updated: 2026-08-06
 >
 > 본 문서는 SKHU Connect 백엔드 개발의 공식 설계 문서이다.
 > 모든 개발(Codex 포함)은 이 문서를 기준으로 진행한다.
@@ -244,6 +244,8 @@ Bookmark
 
 Comment
 
+PetitionAnonymousNumber
+
 CommentLike
 
 Notification
@@ -282,6 +284,8 @@ User
 
 1 : N Comment
 
+1 : N PetitionAnonymousNumber
+
 1 : N CommentLike
 
 1 : N Notification
@@ -295,6 +299,8 @@ Petition
 1 : N Bookmark
 
 1 : N Comment
+
+1 : N PetitionAnonymousNumber
 
 1 : 1 OfficialAnswer
 ```
@@ -349,6 +355,16 @@ N : 1 Petition
 ```
 
 Comment
+
+```
+N : 1 User
+
+N : 1 Petition
+
+N : 1 PetitionAnonymousNumber
+```
+
+PetitionAnonymousNumber
 
 ```
 N : 1 User
@@ -425,27 +441,48 @@ EXPIRED
 
 # 15. 댓글 정책
 
-댓글 작성자는
+댓글 작성자에게 청원별 익명 번호를 부여하고 `익명1`, `익명2` 형태로 표시한다.
 
+- 번호는 청원별로 1번부터 순차 부여한다.
+- 같은 사용자는 같은 청원에서 항상 같은 번호를 사용한다.
+- 다른 청원에서는 별도 번호를 부여한다.
+- 댓글을 삭제한 뒤 다시 작성해도 기존 번호를 유지한다.
+- 청원 작성자도 별도 예외 없이 동일한 익명 번호 정책을 적용한다.
+- 기존 `익명(작성자)` 표시 정책은 사용하지 않는다.
+- 실제 User ID, 이메일, 로그인 ID 등 사용자 식별 정보는 댓글 응답에 반환하지 않는다.
+- 댓글 응답에는 `anonymousNumber`만 작성자 식별값으로 반환한다.
+
+익명 번호는 Comment에 직접 저장하지 않고 `PetitionAnonymousNumber` Entity에서 관리한다.
+
+```text
+UNIQUE(petition_id, user_id)
+UNIQUE(petition_id, anonymous_number)
 ```
-익명1
 
-익명2
+Comment는 발급된 `PetitionAnonymousNumber`를 참조한다. 익명 번호 매핑은 댓글 삭제 여부와 관계없이 유지하며 댓글 삭제 시 함께 삭제하지 않는다.
 
-...
+Comment와 익명 번호 매핑은 다음 정합성 규칙을 반드시 만족한다.
+
+```text
+Comment.petition_id = PetitionAnonymousNumber.petition_id
+Comment.writer_id = PetitionAnonymousNumber.user_id
 ```
 
-형태로 표시한다.
+Comment 생성 요청에서는 `anonymousNumberId`, `anonymousNumber`, `writerId`를 클라이언트 입력으로 받지 않는다. 서버는 Access Token의 인증 사용자와 경로의 `petition_id`를 기준으로 매핑을 조회하거나 발급하고, 해당 매핑만 Comment 생성에 사용한다.
 
-청원 작성자가 댓글을 작성하면
+새 번호 발급과 댓글 저장은 하나의 트랜잭션에서 처리한다.
 
+```text
+1. Petition 행을 PESSIMISTIC_WRITE로 조회한다.
+2. (petition_id, user_id) 매핑을 다시 조회한다.
+3. 매핑이 있으면 기존 번호를 재사용한다.
+4. 매핑이 없으면 해당 청원의 MAX(anonymous_number) + 1을 계산한다.
+5. 새 매핑을 저장하고 flush한다.
+6. 저장된 매핑을 참조하는 Comment를 저장한다.
+7. 트랜잭션을 커밋한다.
 ```
-익명(작성자)
-```
 
-로 표시한다.
-
-실제 User 정보는 절대 반환하지 않는다.
+Petition 행 잠금으로 같은 청원에 대한 최초 번호 발급을 직렬화한다. 서로 다른 청원은 서로 다른 Petition 행을 잠그므로 병렬 처리가 가능하다. 두 Unique 제약조건은 예외적인 경합에서도 중복 매핑을 차단하는 최종 안전장치이다.
 
 ---
 
