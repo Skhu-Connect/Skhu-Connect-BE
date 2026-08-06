@@ -593,6 +593,7 @@ comments
 | `writer_id` | `BIGINT` | 불가 | FK | 댓글 작성자 |
 | `content` | `VARCHAR(1000)` | 불가 |  | 댓글 내용 |
 | `anonymous_number_id` | `BIGINT` | 불가 | FK | 청원별 익명 번호 매핑 식별자 |
+| `parent_comment_id` | `BIGINT` | 가능 | FK, SELF REFERENCE | 원댓글 식별자, NULL이면 원댓글 |
 | `hidden` | `BOOLEAN` | 불가 | DEFAULT FALSE | 관리자 숨김 여부 |
 | `hidden_reason` | `VARCHAR(500)` | 가능 |  | 숨김 사유 |
 | `hidden_at` | `DATETIME(6)` | 가능 |  | 숨김 또는 숨김 해제 처리 시각 |
@@ -609,6 +610,7 @@ User 1 : N Comment
 Petition 1 : N Comment
 PetitionAnonymousNumber 1 : N Comment
 Comment 1 : N CommentLike
+Comment 1 : N Comment (parent_comment_id 자기참조)
 ```
 
 ## 제약조건
@@ -617,6 +619,7 @@ Comment 1 : N CommentLike
 FOREIGN KEY(petition_id) REFERENCES petitions(id)
 FOREIGN KEY(writer_id) REFERENCES users(id)
 FOREIGN KEY(anonymous_number_id) REFERENCES petition_anonymous_numbers(id)
+FOREIGN KEY(parent_comment_id) REFERENCES comments(id)
 FOREIGN KEY(hidden_by_admin_id) REFERENCES admins(id)
 ```
 
@@ -750,6 +753,7 @@ comment_likes
 ```text
 User 1 : N CommentLike
 Comment 1 : N CommentLike
+Comment 1 : N Comment (parent_comment_id 자기참조)
 ```
 
 ## 제약조건
@@ -1104,6 +1108,7 @@ INDEX ix_bookmarks_user_id_created_at (user_id, created_at)
 INDEX ix_comments_petition_id_created_at (petition_id, created_at)
 INDEX ix_comments_writer_id_created_at (writer_id, created_at)
 INDEX ix_comments_anonymous_number_id (anonymous_number_id)
+INDEX ix_comments_parent_comment_id_created_at (parent_comment_id, created_at)
 INDEX ix_comments_hidden_deleted (hidden, deleted)
 ```
 
@@ -1315,3 +1320,14 @@ Codex는 다음 원칙을 따른다.
 8. 실제 사용자 정보는 일반 사용자 API에 반환하지 않는다.
 9. 데이터베이스 변경 사항을 작업 완료 보고서에 전부 명시한다.
 10. 구현 완료 후 관련 테스트와 전체 빌드를 실제로 실행한다.
+
+## Comment 대댓글 정책
+
+- `parent_comment_id IS NULL`은 원댓글, 값이 있으면 대댓글이다.
+- 부모 댓글은 같은 `petition_id`의 원댓글이어야 하며 자기참조 깊이는 1단계로 제한한다.
+- 삭제·숨김 부모에는 새 대댓글을 생성하지 않는다.
+- 원댓글 삭제 시 대댓글은 cascade 삭제하지 않는다. 활성 대댓글이 존재하면 삭제 원댓글을 안내 문구와 함께 유지하고, 없으면 조회에서 제외한다.
+- 원댓글 페이지 조회 후 `parent_comment_id IN (...)`으로 대댓글을 일괄 조회하며 부모별로 그룹핑한다.
+- 원댓글과 대댓글은 각각 `created_at ASC, id ASC`로 정렬한다.
+- 원댓글 응답은 `replies` 배열을 포함하고, 대댓글 응답은 `parentCommentId`를 포함하며 중첩 `replies`는 두지 않는다.
+- 대댓글은 원댓글과 같은 `PetitionAnonymousNumber` 체계를 사용한다. 기존 매핑은 재사용하고 최초 활동 사용자는 기존 발급 정책으로 새 매핑을 발급한다.

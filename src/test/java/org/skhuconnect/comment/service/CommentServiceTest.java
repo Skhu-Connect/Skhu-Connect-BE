@@ -75,7 +75,7 @@ class CommentServiceTest {
         Comment comment = comment(1L, 10L, false);
         when(petitionRepository.findByIdAndDeletedFalseAndHiddenFalse(10L))
                 .thenReturn(Optional.of(comment.getPetition()));
-        when(commentRepository.findByPetitionIdAndDeletedFalse(any(Long.class), any()))
+        when(commentRepository.findRootPage(any(Long.class), any()))
                 .thenReturn(new PageImpl<>(List.of(comment)));
 
         var response = service.findAll(null, 10L, 0, 20);
@@ -92,7 +92,7 @@ class CommentServiceTest {
         Comment comment = comment(1L, 10L, true);
         when(petitionRepository.findByIdAndDeletedFalseAndHiddenFalse(10L))
                 .thenReturn(Optional.of(comment.getPetition()));
-        when(commentRepository.findByPetitionIdAndDeletedFalse(any(Long.class), any()))
+        when(commentRepository.findRootPage(any(Long.class), any()))
                 .thenReturn(new PageImpl<>(List.of(comment)));
 
         var found = service.findAll(null, 10L, 0, 20).content().get(0);

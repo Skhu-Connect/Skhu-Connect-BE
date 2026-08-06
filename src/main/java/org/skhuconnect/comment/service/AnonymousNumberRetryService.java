@@ -44,6 +44,11 @@ public class AnonymousNumberRetryService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public CommentResponse retryOnce(Long userId, Long petitionId, String content) {
+        return retryOnce(userId, petitionId, content, null);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public CommentResponse retryOnce(Long userId, Long petitionId, String content, Long parentCommentId) {
         Petition petition = petitionRepository.findVisibleByIdForUpdate(petitionId)
                 .orElseThrow(() -> new CommentException(Reason.PETITION_NOT_FOUND));
         validateCommentable(petition);
@@ -53,9 +58,20 @@ public class AnonymousNumberRetryService {
                 .findByPetitionIdAndUserId(petitionId, userId)
                 .orElseThrow(() -> new CommentException(
                         Reason.ANONYMOUS_NUMBER_CONFLICT));
+        Comment parent = findParent(petitionId, parentCommentId);
         Comment comment = commentRepository.saveAndFlush(
-                Comment.create(petition, user, mapping, content));
+                Comment.create(petition, user, mapping, parent, content));
         return CommentResponse.from(comment, 0, userId, false);
+    }
+
+    private Comment findParent(Long petitionId, Long parentCommentId) {
+        if (parentCommentId == null) return null;
+        Comment parent = commentRepository.findByIdAndPetitionId(parentCommentId, petitionId)
+                .orElseThrow(() -> new CommentException(Reason.PARENT_COMMENT_NOT_FOUND));
+        if (parent.isReply()) throw new CommentException(Reason.REPLY_DEPTH_EXCEEDED);
+        if (parent.isDeleted()) throw new CommentException(Reason.PARENT_COMMENT_DELETED);
+        if (parent.isHidden()) throw new CommentException(Reason.PARENT_COMMENT_HIDDEN);
+        return parent;
     }
 
     private void validateCommentable(Petition petition) {
