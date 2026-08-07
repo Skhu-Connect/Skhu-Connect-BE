@@ -1250,12 +1250,19 @@ POST /connect/auth/email-verifications/confirm
 POST /connect/auth/password/reset
 ```
 
-## 21.3 관리자 Refresh Token
+## 21.3 Administrator Refresh Token
 
-`RefreshToken`은 현재 User와의 1:1 관계로만 설계되어 있다.
+Administrators use a refresh-token structure separate from users.
 
-관리자 로그인에서도 Access Token과 Refresh Token을 모두 사용할지, 관리자 전용 Refresh Token 저장 구조를 추가할지는 확정되지 않았다.
+```text
+admin_refresh_tokens
+```
 
+- One active token is stored per administrator.
+- `admin_id` and `token_hash` are unique; raw refresh tokens are never stored.
+- Tokens expire after 14 days and rotate on refresh.
+- The administrator cookie is named `adminRefreshToken` and is scoped to `/connect/admin/auth`.
+- The user `refreshToken` cookie and `refresh_tokens` table are not used by administrator authentication.
 ## 21.4 답변 수정 이력
 
 다음 API가 존재하지만 `OfficialAnswerHistory`는 MVP Entity에서 제외되어 있다.

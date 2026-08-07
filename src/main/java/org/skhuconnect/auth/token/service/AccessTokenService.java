@@ -1,5 +1,6 @@
 package org.skhuconnect.auth.token.service;
 
+import org.skhuconnect.admin.entity.Admin;
 import org.skhuconnect.user.entity.User;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
@@ -27,13 +28,21 @@ public class AccessTokenService {
     }
 
     public String issue(User user) {
+        return issue(user.getId(), "USER");
+    }
+
+    public String issue(Admin admin) {
+        return issue(admin.getId(), "ADMIN");
+    }
+
+    private String issue(Long subjectId, String role) {
         Instant issuedAt = clock.instant();
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).build();
         JwtClaimsSet claims = JwtClaimsSet.builder()
-                .subject(user.getId().toString())
+                .subject(subjectId.toString())
                 .issuedAt(issuedAt)
                 .expiresAt(issuedAt.plus(VALIDITY))
-                .claim("role", "USER")
+                .claim("role", role)
                 .build();
         return jwtEncoder.encode(JwtEncoderParameters.from(header, claims))
                 .getTokenValue();

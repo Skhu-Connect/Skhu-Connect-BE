@@ -253,6 +253,34 @@ class AccessTokenAuthenticationFilterTest {
         verify(filterChain).doFilter(request, response);
     }
 
+    @Test
+    void adminTokenIsAcceptedOnlyForAdminProtectedRequest() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "GET", "/connect/admin/threshold-settings");
+        request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer admin-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        when(jwtDecoder.decode("admin-token")).thenReturn(userJwt("7", "ADMIN"));
+
+        filter.doFilter(request, response, filterChain);
+
+        assertThat(request.getAttribute(
+                AccessTokenAuthenticationFilter.ADMIN_ID_ATTRIBUTE)).isEqualTo(7L);
+        verify(filterChain).doFilter(request, response);
+    }
+
+    @Test
+    void userTokenCannotAccessAdminProtectedRequest() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "GET", "/connect/admin/threshold-settings");
+        request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer user-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        when(jwtDecoder.decode("user-token")).thenReturn(userJwt("42", "USER"));
+
+        filter.doFilter(request, response, filterChain);
+
+        assertThat(response.getStatus()).isEqualTo(401);
+        verify(filterChain, never()).doFilter(request, response);
+    }
     private MockHttpServletRequest petitionRequest() {
         return new MockHttpServletRequest("POST", "/connect/petitions");
     }

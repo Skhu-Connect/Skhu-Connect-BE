@@ -19,11 +19,15 @@ import java.io.IOException;
 public class AccessTokenAuthenticationFilter extends OncePerRequestFilter {
 
     public static final String USER_ID_ATTRIBUTE = "userId";
+    public static final String ADMIN_ID_ATTRIBUTE = "adminId";
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String USER_ROLE = "USER";
+    private static final String ADMIN_ROLE = "ADMIN";
     private static final String PETITION_PATH = "/connect/petitions";
     private static final String NOTIFICATION_PATH = "/connect/notifications";
     private static final String USER_PATH = "/connect/users";
+    private static final String ADMIN_PATH = "/connect/admin";
+    private static final String ADMIN_AUTH_PATH = "/connect/admin/auth";
 
     private final JwtDecoder jwtDecoder;
 
@@ -37,6 +41,9 @@ public class AccessTokenAuthenticationFilter extends OncePerRequestFilter {
             return true;
         }
         String path = request.getRequestURI();
+        if (path.equals(ADMIN_PATH) || path.startsWith(ADMIN_PATH + "/")) {
+            return path.equals(ADMIN_AUTH_PATH) || path.startsWith(ADMIN_AUTH_PATH + "/");
+        }
         boolean petitionPath = path.equals(PETITION_PATH)
                 || path.startsWith(PETITION_PATH + "/");
         boolean notificationPath = path.equals(NOTIFICATION_PATH)
@@ -62,9 +69,10 @@ public class AccessTokenAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
+        boolean adminRequest = isAdminRequest(request);
         String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (authorization == null || !authorization.startsWith(BEARER_PREFIX)) {
-            if (isPublicCommentListGet(request) && authorization == null) {
+            if (!adminRequest && isPublicCommentListGet(request) && authorization == null) {
                 filterChain.doFilter(request, response);
                 return;
             }
@@ -74,26 +82,31 @@ public class AccessTokenAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             Jwt jwt = jwtDecoder.decode(authorization.substring(BEARER_PREFIX.length()));
-            if (!USER_ROLE.equals(jwt.getClaimAsString("role"))) {
+            String expectedRole = adminRequest ? ADMIN_ROLE : USER_ROLE;
+            if (!expectedRole.equals(jwt.getClaimAsString("role"))) {
                 unauthorized(response);
                 return;
             }
-            Long userId = Long.valueOf(jwt.getSubject());
-            if (userId <= 0) {
+            Long subjectId = Long.valueOf(jwt.getSubject());
+            if (subjectId <= 0) {
                 unauthorized(response);
                 return;
             }
-            request.setAttribute(USER_ID_ATTRIBUTE, userId);
+            request.setAttribute(adminRequest ? ADMIN_ID_ATTRIBUTE : USER_ID_ATTRIBUTE, subjectId);
             filterChain.doFilter(request, response);
         } catch (JwtException | IllegalArgumentException exception) {
             unauthorized(response);
         }
     }
 
+    private boolean isAdminRequest(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path.equals(ADMIN_PATH) || path.startsWith(ADMIN_PATH + "/");
+    }
+
     private boolean isPublicCommentListGet(HttpServletRequest request) {
         return HttpMethod.GET.matches(request.getMethod())
-                && request.getRequestURI().matches(
-                        PETITION_PATH + "/\\d+/comments");
+                && request.getRequestURI().matches(PETITION_PATH + "/\\d+/comments");
     }
 
     private void unauthorized(HttpServletResponse response) throws IOException {
