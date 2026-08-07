@@ -2,6 +2,7 @@ package org.skhuconnect.auth.email.mail;
 
 import org.skhuconnect.auth.email.exception.EmailDeliveryException;
 import org.skhuconnect.global.config.AppMailProperties;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -17,6 +18,7 @@ public class ResendEmailSender implements EmailSender {
     private final RestClient client;
     private final AppMailProperties properties;
 
+    @Autowired
     public ResendEmailSender(AppMailProperties properties) {
         this(RestClient.builder(), properties);
     }
