@@ -143,6 +143,20 @@ class PetitionTest {
     }
 
     @Test
+    void underReviewPetitionCanBeAnsweredOnlyOnce() {
+        LocalDateTime createdAt = LocalDateTime.of(2026, 8, 5, 12, 0);
+        Petition petition = Petition.create(
+                mock(User.class), PetitionCategory.FACILITY,
+                "title", "content", 1, createdAt);
+        petition.addAgreement(createdAt.plusHours(1));
+
+        petition.answer();
+
+        assertThat(petition.getStatus()).isEqualTo(PetitionStatus.ANSWERED);
+        assertThatThrownBy(petition::answer).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
     void exactDeadlineIsNotAgreementOpen() {
         LocalDateTime createdAt = LocalDateTime.of(2026, 8, 5, 12, 0);
         Petition petition = createPetition(createdAt);

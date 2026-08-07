@@ -186,6 +186,12 @@ public class Petition extends BaseEntity {
         }
         agreementCount--;
     }
+    public void answer() {
+        if (status != PetitionStatus.UNDER_REVIEW || hidden || deleted) {
+            throw new IllegalStateException("petition is not answerable");
+        }
+        status = PetitionStatus.ANSWERED;
+    }
     public boolean isWrittenBy(Long userId) {
         return writer.getId().equals(userId);
     }

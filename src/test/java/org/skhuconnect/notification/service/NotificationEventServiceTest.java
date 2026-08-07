@@ -37,6 +37,17 @@ class NotificationEventServiceTest {
         service.onAgreementAdded(p,5);
         verify(notifications,never()).saveAndFlush(any());
     }
+    @Test void answerNotificationUsesWriterAndAgreementAudienceWithExistingDeduplicationPolicy() {
+        User writer=user(1L); User supporter=user(2L); Petition petition=mock(Petition.class);
+        when(petition.getId()).thenReturn(10L); when(petition.getWriter()).thenReturn(writer);
+        Agreement supporterAgreement=mock(Agreement.class); when(supporterAgreement.getUser()).thenReturn(supporter);
+        Agreement writerAgreement=mock(Agreement.class); when(writerAgreement.getUser()).thenReturn(writer);
+        when(agreements.findByPetitionId(10L)).thenReturn(List.of(supporterAgreement, writerAgreement));
+
+        service.onPetitionAnswered(petition);
+
+        verify(notifications,times(2)).saveAndFlush(any(Notification.class));
+    }
     @Test void replyAndLikeNotifyOwnerButNotSelf() {
         User owner=user(1L), actor=user(2L); Petition petition=mock(Petition.class); when(petition.getId()).thenReturn(10L);
         PetitionAnonymousNumber ownerMap=PetitionAnonymousNumber.create(petition,owner,1);
