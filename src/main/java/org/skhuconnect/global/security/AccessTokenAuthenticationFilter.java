@@ -33,6 +33,9 @@ public class AccessTokenAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
+        if (HttpMethod.OPTIONS.matches(request.getMethod())) {
+            return true;
+        }
         String path = request.getRequestURI();
         boolean petitionPath = path.equals(PETITION_PATH)
                 || path.startsWith(PETITION_PATH + "/");

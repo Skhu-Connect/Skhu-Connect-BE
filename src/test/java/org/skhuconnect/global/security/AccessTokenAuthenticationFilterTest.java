@@ -117,6 +117,17 @@ class AccessTokenAuthenticationFilterTest {
     }
 
     @Test
+    void optionsPreflightDoesNotRequireToken() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "OPTIONS", "/connect/users/me");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        verify(filterChain).doFilter(request, response);
+        verify(jwtDecoder, never()).decode(org.mockito.ArgumentMatchers.anyString());
+    }
+    @Test
     void nonPetitionRequestDoesNotRequireToken() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest(
                 "GET", "/connect/departments");
