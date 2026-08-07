@@ -17,6 +17,8 @@ server:
   forward-headers-strategy: framework
 
 app:
+  fcm:
+    service-account-json: ${FIREBASE_SERVICE_ACCOUNT_JSON:}
   mail:
     resend-api-key: ${RESEND_API_KEY}
     from: ${MAIL_FROM}

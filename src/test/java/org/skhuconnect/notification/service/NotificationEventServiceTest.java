@@ -5,6 +5,7 @@ import org.skhuconnect.agreement.repository.AgreementRepository;
 import org.skhuconnect.agreement.entity.Agreement;
 import org.skhuconnect.comment.entity.*;
 import org.skhuconnect.notification.entity.Notification;
+import org.skhuconnect.notification.fcm.FcmPushService;
 import org.skhuconnect.notification.repository.NotificationRepository;
 import org.skhuconnect.petition.entity.Petition;
 import org.skhuconnect.user.entity.User;
@@ -14,9 +15,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 class NotificationEventServiceTest {
-    NotificationRepository notifications; AgreementRepository agreements; NotificationEventService service;
+    NotificationRepository notifications; AgreementRepository agreements; FcmPushService fcm; NotificationEventService service;
     @BeforeEach void setUp(){ notifications=mock(NotificationRepository.class); agreements=mock(AgreementRepository.class);
-        service=new NotificationEventService(notifications,agreements); }
+        fcm=mock(FcmPushService.class); service=new NotificationEventService(notifications,agreements,fcm); }
     @Test void thresholdEventsAreCreatedOnceAndWriterIsNotDuplicated() {
         User writer=user(1L); Petition petition=mock(Petition.class);
         when(petition.getId()).thenReturn(10L); when(petition.getWriter()).thenReturn(writer);

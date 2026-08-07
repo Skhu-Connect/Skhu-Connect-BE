@@ -27,6 +27,7 @@ dependencies {
     implementation 'org.springframework.security:spring-security-oauth2-jose'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3'
+    implementation 'com.google.firebase:firebase-admin:9.10.0'
 
     // Database
     runtimeOnly 'com.mysql:mysql-connector-j'

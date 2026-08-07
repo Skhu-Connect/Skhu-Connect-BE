@@ -4,6 +4,7 @@ import org.skhuconnect.agreement.entity.Agreement;
 import org.skhuconnect.agreement.repository.AgreementRepository;
 import org.skhuconnect.comment.entity.Comment;
 import org.skhuconnect.notification.entity.*;
+import org.skhuconnect.notification.fcm.FcmPushService;
 import org.skhuconnect.notification.repository.NotificationRepository;
 import org.skhuconnect.petition.entity.Petition;
 import org.skhuconnect.user.entity.User;
@@ -16,8 +17,9 @@ import static org.skhuconnect.notification.entity.NotificationType.*;
 public class NotificationEventService {
     private final NotificationRepository notifications;
     private final AgreementRepository agreements;
-    public NotificationEventService(NotificationRepository notifications, AgreementRepository agreements) {
-        this.notifications = notifications; this.agreements = agreements;
+    private final FcmPushService fcmPushService;
+    public NotificationEventService(NotificationRepository notifications, AgreementRepository agreements, FcmPushService fcmPushService) {
+        this.notifications = notifications; this.agreements = agreements; this.fcmPushService = fcmPushService;
     }
 
     public void onAgreementAdded(Petition petition, int previousCount) {
@@ -72,7 +74,8 @@ public class NotificationEventService {
                             Comment comment, String eventKey) {
         if (!receiver.isNotificationEnabled() || notifications.existsByEventKey(eventKey)) return;
         try {
-            notifications.saveAndFlush(Notification.create(receiver, type, petition, comment, eventKey));
+            Notification notification = notifications.saveAndFlush(Notification.create(receiver, type, petition, comment, eventKey));
+            try { fcmPushService.send(notification); } catch (RuntimeException ignored) { }
         } catch (DataIntegrityViolationException ignored) {
             // Unique event_key is the final guard for concurrent duplicate events.
         }
