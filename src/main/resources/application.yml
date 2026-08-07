@@ -7,21 +7,6 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
 
-  mail:
-    host: ${MAIL_HOST}
-    port: ${MAIL_PORT}
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
-          connectiontimeout: 5000
-          timeout: 5000
-          writetimeout: 5000
-
   jpa:
     hibernate:
       ddl-auto: update
@@ -32,6 +17,7 @@ server:
 
 app:
   mail:
+    resend-api-key: ${RESEND_API_KEY}
     from: ${MAIL_FROM}
   jwt:
     secret: ${JWT_SECRET}
