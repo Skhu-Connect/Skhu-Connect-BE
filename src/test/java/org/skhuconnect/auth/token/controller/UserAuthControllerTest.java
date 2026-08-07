@@ -32,7 +32,7 @@ class UserAuthControllerTest {
     void setUp() {
         service = mock(UserAuthService.class);
         RefreshTokenCookieService cookies = new RefreshTokenCookieService(
-                new JwtProperties("MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=", false));
+                new JwtProperties("MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=", false, "Lax"));
         mockMvc = MockMvcBuilders.standaloneSetup(
                         new UserAuthController(service, cookies))
                 .setControllerAdvice(new UserAuthExceptionHandler())

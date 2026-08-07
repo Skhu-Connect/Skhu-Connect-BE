@@ -11,10 +11,12 @@ public class JwtProperties {
 
     private final String secret;
     private final boolean cookieSecure;
+    private final String cookieSameSite;
 
-    public JwtProperties(String secret, boolean cookieSecure) {
+    public JwtProperties(String secret, boolean cookieSecure, String cookieSameSite) {
         this.secret = secret;
         this.cookieSecure = cookieSecure;
+        this.cookieSameSite = cookieSameSite;
     }
 
     public SecretKey secretKey() {
@@ -32,5 +34,9 @@ public class JwtProperties {
 
     public boolean isCookieSecure() {
         return cookieSecure;
+    }
+
+    public String getCookieSameSite() {
+        return cookieSameSite;
     }
 }

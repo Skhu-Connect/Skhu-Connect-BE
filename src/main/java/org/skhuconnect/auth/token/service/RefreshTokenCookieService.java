@@ -32,6 +32,6 @@ public class RefreshTokenCookieService {
                 .httpOnly(true)
                 .secure(properties.isCookieSecure())
                 .path(COOKIE_PATH)
-                .sameSite("Lax");
+                .sameSite(properties.getCookieSameSite());
     }
 }
