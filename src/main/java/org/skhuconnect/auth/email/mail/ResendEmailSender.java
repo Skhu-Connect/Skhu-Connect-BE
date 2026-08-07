@@ -17,7 +17,11 @@ public class ResendEmailSender implements EmailSender {
     private final RestClient client;
     private final AppMailProperties properties;
 
-    public ResendEmailSender(RestClient.Builder builder, AppMailProperties properties) {
+    public ResendEmailSender(AppMailProperties properties) {
+        this(RestClient.builder(), properties);
+    }
+
+    ResendEmailSender(RestClient.Builder builder, AppMailProperties properties) {
         this.client = builder.baseUrl(RESEND_EMAILS_URL).build();
         this.properties = properties;
     }
