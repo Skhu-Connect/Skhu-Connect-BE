@@ -1,0 +1,3 @@
+package org.skhuconnect.admin.notificationlog.dto;
+import org.skhuconnect.admin.notificationlog.entity.*; import java.time.LocalDateTime;
+public record AdminNotificationLogResponse(Long id,NotificationLogType type,Long adminId,NotificationLogTargetType targetType,Long targetId,String description,LocalDateTime createdAt){public static AdminNotificationLogResponse from(NotificationLog log){return new AdminNotificationLogResponse(log.getId(),log.getType(),log.getAdmin()==null?null:log.getAdmin().getId(),log.getTargetType(),log.getTargetId(),log.getDescription(),log.getCreatedAt());}}

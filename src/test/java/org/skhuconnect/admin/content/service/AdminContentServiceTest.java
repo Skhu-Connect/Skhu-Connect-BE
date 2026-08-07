@@ -59,7 +59,7 @@ class AdminContentServiceTest {
         when(admins.findById(7L)).thenReturn(Optional.of(admin));
 
         service.hidePetition(7L, 10L, new AdminContentHideRequest("policy violation"));
-        service.restorePetition(10L);
+        service.restorePetition(7L, 10L);
 
         assertThat(petition.isHidden()).isFalse();
         assertThat(petition.getHiddenReason()).isEqualTo("policy violation");
@@ -73,7 +73,7 @@ class AdminContentServiceTest {
         when(admins.findById(7L)).thenReturn(Optional.of(admin));
 
         service.hideComment(7L, 10L, 20L, new AdminContentHideRequest("policy violation"));
-        service.restoreComment(10L, 20L);
+        service.restoreComment(7L, 10L, 20L);
 
         assertThat(comment.isHidden()).isFalse();
         assertThat(comment.getHiddenReason()).isEqualTo("policy violation");

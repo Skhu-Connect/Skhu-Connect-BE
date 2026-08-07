@@ -61,8 +61,8 @@ public class AdminContentController {
             @ApiResponse(responseCode = "404", description = "Petition not found", content = @Content)
     })
     @PatchMapping("/{petitionId}/restore")
-    public AdminPetitionResponse restorePetition(@PathVariable Long petitionId) {
-        return service.restorePetition(petitionId);
+    public AdminPetitionResponse restorePetition(@RequestAttribute("adminId") Long adminId, @PathVariable Long petitionId) {
+        return service.restorePetition(adminId, petitionId);
     }
 
     @Operation(summary = "List comments and replies for administration")
@@ -89,9 +89,10 @@ public class AdminContentController {
     @Operation(summary = "Restore a hidden comment or reply")
     @PatchMapping("/{petitionId}/comments/{commentId}/restore")
     public AdminCommentResponse restoreComment(
+            @RequestAttribute("adminId") Long adminId,
             @PathVariable Long petitionId,
             @PathVariable Long commentId
     ) {
-        return service.restoreComment(petitionId, commentId);
+        return service.restoreComment(adminId, petitionId, commentId);
     }
 }

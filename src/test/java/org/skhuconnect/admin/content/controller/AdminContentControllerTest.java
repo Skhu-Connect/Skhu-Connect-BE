@@ -59,12 +59,12 @@ class AdminContentControllerTest {
     void listsAndRestoresCommentOrReply() throws Exception {
         when(service.findComments(10L, 0, 20)).thenReturn(new AdminPageResponse<>(
                 List.of(comment()), 0, 20, 1, 1, true, true));
-        when(service.restoreComment(10L, 20L)).thenReturn(comment());
+        when(service.restoreComment(7L, 10L, 20L)).thenReturn(comment());
 
         mockMvc.perform(get("/connect/admin/petitions/10/comments"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].parentCommentId").value(11));
-        mockMvc.perform(patch("/connect/admin/petitions/10/comments/20/restore"))
+        mockMvc.perform(patch("/connect/admin/petitions/10/comments/20/restore").requestAttr("adminId", 7L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(20));
     }

@@ -1,0 +1,3 @@
+package org.skhuconnect.admin.notificationlog.entity;
+import org.junit.jupiter.api.Test; import org.skhuconnect.admin.entity.Admin; import static org.assertj.core.api.Assertions.assertThat; import static org.mockito.Mockito.mock;
+class NotificationLogTest {@Test void storesGenericTargetAndNullableSystemAdmin(){NotificationLog log=NotificationLog.create(NotificationLogType.THRESHOLD_REACHED,null,NotificationLogTargetType.PETITION,10L,"threshold reached");assertThat(log.getAdmin()).isNull();assertThat(log.getTargetType()).isEqualTo(NotificationLogTargetType.PETITION);assertThat(log.getTargetId()).isEqualTo(10L);}}

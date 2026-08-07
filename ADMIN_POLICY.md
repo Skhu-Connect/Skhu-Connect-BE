@@ -66,3 +66,9 @@
 - 청원, 댓글, 대댓글 복구 시 hidden만 alse로 변경한다.
 - 마지막 숨김의 사유, 처리 관리자, 처리 시각은 보존한다.
 - 사용자 deleted 상태는 관리자 숨김/복구 대상이 아니다.
+
+## 5.1 NotificationLog schema decisions
+
+- target_type: PETITION, COMMENT, THRESHOLD_SETTING.
+- Restore events use PETITION_RESTORED and COMMENT_RESTORED.
+- Automatic threshold events store admin_id as null; administrator actions store the processing administrator.

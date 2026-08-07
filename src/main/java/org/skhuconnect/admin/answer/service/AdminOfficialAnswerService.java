@@ -6,6 +6,8 @@ import org.skhuconnect.admin.answer.entity.OfficialAnswer;
 import org.skhuconnect.admin.answer.exception.AdminOfficialAnswerException;
 import org.skhuconnect.admin.answer.repository.OfficialAnswerRepository;
 import org.skhuconnect.admin.entity.Admin;
+import org.skhuconnect.admin.notificationlog.service.AdminNotificationLogService;
+import org.skhuconnect.admin.notificationlog.entity.*;
 import org.skhuconnect.admin.repository.AdminRepository;
 import org.skhuconnect.notification.service.NotificationEventService;
 import org.skhuconnect.petition.entity.Petition;
@@ -21,6 +23,7 @@ public class AdminOfficialAnswerService {
     private final PetitionRepository petitionRepository;
     private final OfficialAnswerRepository officialAnswerRepository;
     private final NotificationEventService notificationEventService;
+    private AdminNotificationLogService notificationLogs;
 
     public AdminOfficialAnswerService(
             AdminRepository adminRepository,
@@ -50,6 +53,7 @@ public class AdminOfficialAnswerService {
                 petition, admin, request.content(), request.answerSource());
         OfficialAnswer savedAnswer = officialAnswerRepository.saveAndFlush(answer);
         notificationEventService.onPetitionAnswered(petition);
+        if (notificationLogs != null) notificationLogs.record(NotificationLogType.ANSWER_REGISTERED, admin, NotificationLogTargetType.PETITION, petitionId, "Official answer registered");
         return OfficialAnswerResponse.from(savedAnswer);
     }
 
@@ -63,8 +67,12 @@ public class AdminOfficialAnswerService {
         OfficialAnswer answer = officialAnswerRepository.findByPetitionId(petitionId)
                 .orElseThrow(() -> error(AdminOfficialAnswerException.Reason.OFFICIAL_ANSWER_NOT_FOUND));
         answer.update(admin, request.content(), request.answerSource());
+        if (notificationLogs != null) notificationLogs.record(NotificationLogType.ANSWER_UPDATED, admin, NotificationLogTargetType.PETITION, petitionId, "Official answer updated");
         return OfficialAnswerResponse.from(answer);
     }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setNotificationLogs(AdminNotificationLogService notificationLogs) { this.notificationLogs = notificationLogs; }
 
     private Admin findAdmin(Long adminId) {
         return adminRepository.findById(adminId)

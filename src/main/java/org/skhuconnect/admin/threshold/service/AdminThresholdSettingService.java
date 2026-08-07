@@ -2,6 +2,8 @@ package org.skhuconnect.admin.threshold.service;
 
 import org.skhuconnect.admin.entity.Admin;
 import org.skhuconnect.admin.repository.AdminRepository;
+import org.skhuconnect.admin.notificationlog.service.AdminNotificationLogService;
+import org.skhuconnect.admin.notificationlog.entity.*;
 import org.skhuconnect.admin.threshold.dto.AdminThresholdSettingResponse;
 import org.skhuconnect.admin.threshold.dto.AdminThresholdSettingUpdateRequest;
 import org.skhuconnect.admin.threshold.exception.AdminThresholdSettingException;
@@ -19,6 +21,7 @@ public class AdminThresholdSettingService {
 
     private final ThresholdSettingRepository thresholdSettingRepository;
     private final AdminRepository adminRepository;
+    private AdminNotificationLogService notificationLogs;
 
     public AdminThresholdSettingService(
             ThresholdSettingRepository thresholdSettingRepository,
@@ -48,8 +51,12 @@ public class AdminThresholdSettingService {
                 .orElseThrow(() -> error(AdminThresholdSettingException.Reason.ADMIN_NOT_FOUND));
         setting.update(request.totalStudentCount(), request.thresholdRate(),
                 request.minimumCount(), request.changeReason(), admin);
+        if (notificationLogs != null) notificationLogs.record(NotificationLogType.THRESHOLD_SETTING_UPDATED, admin, NotificationLogTargetType.THRESHOLD_SETTING, setting.getId(), "Threshold setting updated: " + category);
         return AdminThresholdSettingResponse.from(setting);
     }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setNotificationLogs(AdminNotificationLogService notificationLogs) { this.notificationLogs = notificationLogs; }
 
     private AdminThresholdSettingException error(
             AdminThresholdSettingException.Reason reason) {

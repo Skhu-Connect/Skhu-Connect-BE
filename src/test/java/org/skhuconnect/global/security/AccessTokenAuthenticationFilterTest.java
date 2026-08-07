@@ -256,7 +256,7 @@ class AccessTokenAuthenticationFilterTest {
     @Test
     void adminTokenIsAcceptedOnlyForAdminProtectedRequest() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest(
-                "GET", "/connect/admin/petitions/10/answer");
+                "GET", "/connect/admin/notification-logs");
         request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer admin-token");
         MockHttpServletResponse response = new MockHttpServletResponse();
         when(jwtDecoder.decode("admin-token")).thenReturn(userJwt("7", "ADMIN"));
@@ -271,7 +271,7 @@ class AccessTokenAuthenticationFilterTest {
     @Test
     void userTokenCannotAccessAdminProtectedRequest() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest(
-                "GET", "/connect/admin/petitions/10/answer");
+                "GET", "/connect/admin/notification-logs");
         request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer user-token");
         MockHttpServletResponse response = new MockHttpServletResponse();
         when(jwtDecoder.decode("user-token")).thenReturn(userJwt("42", "USER"));

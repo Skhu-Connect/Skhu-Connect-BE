@@ -1336,3 +1336,8 @@ Codex는 다음 원칙을 따른다.
 - 자기 이벤트와 `notification_enabled=false` 수신자에게는 생성하지 않는다.
 - `event_key`로 이벤트별·수신자별 최초 1회 생성을 보장한다.
 - 알림은 삭제하지 않으며 개별·전체 읽음, 최신순 목록, 읽지 않은 개수 조회를 지원한다.
+## NotificationLog implementation decisions
+
+- target_type values: PETITION, COMMENT, THRESHOLD_SETTING.
+- NotificationLogType additionally includes PETITION_RESTORED and COMMENT_RESTORED.
+- THRESHOLD_REACHED stores a null admin_id; direct administrator actions store the processor.

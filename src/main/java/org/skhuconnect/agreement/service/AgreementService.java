@@ -10,6 +10,8 @@ import org.skhuconnect.petition.repository.PetitionRepository;
 import org.skhuconnect.user.entity.User;
 import org.skhuconnect.user.repository.UserRepository;
 import org.skhuconnect.notification.service.NotificationEventService;
+import org.skhuconnect.admin.notificationlog.service.AdminNotificationLogService;
+import org.skhuconnect.admin.notificationlog.entity.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,7 @@ public class AgreementService {
     private final UserRepository userRepository;
     private final Clock clock;
     private NotificationEventService notificationEventService;
+    private AdminNotificationLogService notificationLogs;
 
     public AgreementService(
             AgreementRepository agreementRepository,
@@ -43,6 +46,9 @@ public class AgreementService {
     void setNotificationEventService(NotificationEventService service) {
         this.notificationEventService = service;
     }
+
+    @Autowired
+    void setAdminNotificationLogService(AdminNotificationLogService service) { this.notificationLogs = service; }
 
     @Transactional
     public AgreementResponse agree(Long userId, Long petitionId) {
@@ -62,6 +68,7 @@ public class AgreementService {
         }
         int previousCount = petition.getAgreementCount();
         petition.addAgreement(now);
+        if (notificationLogs != null && petition.getStatus() == org.skhuconnect.petition.entity.PetitionStatus.UNDER_REVIEW) notificationLogs.record(NotificationLogType.THRESHOLD_REACHED, null, NotificationLogTargetType.PETITION, petitionId, "Petition agreement threshold reached");
         if (notificationEventService != null) {
             notificationEventService.onAgreementAdded(petition, previousCount);
         }
