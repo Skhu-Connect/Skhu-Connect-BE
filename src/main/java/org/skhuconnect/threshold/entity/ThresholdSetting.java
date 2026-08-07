@@ -4,13 +4,17 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import org.skhuconnect.admin.entity.Admin;
 import org.skhuconnect.global.entity.BaseEntity;
 import org.skhuconnect.petition.entity.PetitionCategory;
 
@@ -43,6 +47,13 @@ public class ThresholdSetting extends BaseEntity {
     @Column(name = "minimum_count", nullable = false)
     private int minimumCount;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "updated_by_admin_id")
+    private Admin updatedByAdmin;
+
+    @Column(name = "change_reason", length = 500)
+    private String changeReason;
+
     protected ThresholdSetting() {
     }
 
@@ -69,6 +80,20 @@ public class ThresholdSetting extends BaseEntity {
                 category, totalStudentCount, thresholdRate, minimumCount);
     }
 
+    public void update(
+            int totalStudentCount,
+            BigDecimal thresholdRate,
+            int minimumCount,
+            String changeReason,
+            Admin updatedByAdmin
+    ) {
+        this.totalStudentCount = totalStudentCount;
+        this.thresholdRate = Objects.requireNonNull(thresholdRate);
+        this.minimumCount = minimumCount;
+        this.changeReason = Objects.requireNonNull(changeReason);
+        this.updatedByAdmin = Objects.requireNonNull(updatedByAdmin);
+    }
+
     public int calculateTargetAgreementCount() {
         int calculatedCount = thresholdRate
                 .multiply(BigDecimal.valueOf(totalStudentCount))
@@ -77,23 +102,11 @@ public class ThresholdSetting extends BaseEntity {
         return Math.max(calculatedCount, minimumCount);
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public PetitionCategory getCategory() {
-        return category;
-    }
-
-    public int getTotalStudentCount() {
-        return totalStudentCount;
-    }
-
-    public BigDecimal getThresholdRate() {
-        return thresholdRate;
-    }
-
-    public int getMinimumCount() {
-        return minimumCount;
-    }
+    public Long getId() { return id; }
+    public PetitionCategory getCategory() { return category; }
+    public int getTotalStudentCount() { return totalStudentCount; }
+    public BigDecimal getThresholdRate() { return thresholdRate; }
+    public int getMinimumCount() { return minimumCount; }
+    public Admin getUpdatedByAdmin() { return updatedByAdmin; }
+    public String getChangeReason() { return changeReason; }
 }
