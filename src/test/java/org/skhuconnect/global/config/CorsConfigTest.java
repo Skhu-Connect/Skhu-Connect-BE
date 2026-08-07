@@ -11,13 +11,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 class CorsConfigTest {
 
     @Test
-    void permitsOnlyConfiguredVercelOriginWithCredentials() {
+    void permitsConfiguredFrontendOriginsWithCredentials() {
         TestCorsRegistry registry = new TestCorsRegistry();
         new CorsConfig().corsConfigurer().addCorsMappings(registry);
 
         CorsConfiguration configuration = registry.configurations().get("/**");
         assertThat(configuration.getAllowedOrigins())
-                .containsExactly("https://petition-system-two.vercel.app");
+                .containsExactly(
+                        "https://petition-system-two.vercel.app",
+                        "http://localhost:5173"
+                );
         assertThat(configuration.getAllowedMethods())
                 .containsExactly("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS");
         assertThat(configuration.getAllowCredentials()).isTrue();
