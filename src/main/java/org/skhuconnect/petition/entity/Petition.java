@@ -15,6 +15,7 @@ import jakarta.persistence.Table;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import org.skhuconnect.admin.entity.Admin;
 import org.skhuconnect.global.entity.BaseEntity;
 import org.skhuconnect.user.entity.User;
 
@@ -81,6 +82,10 @@ public class Petition extends BaseEntity {
     @Column(name = "hidden_at")
     private LocalDateTime hiddenAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "hidden_by_admin_id")
+    private Admin hiddenByAdmin;
+
     @Column(name = "deleted", nullable = false)
     @ColumnDefault("false")
     private boolean deleted;
@@ -134,6 +139,22 @@ public class Petition extends BaseEntity {
         this.content = requireText(content, "content");
     }
 
+    public void hide(String hiddenReason, Admin hiddenByAdmin, LocalDateTime hiddenAt) {
+        if (deleted) {
+            throw new IllegalStateException("deleted petition cannot be hidden");
+        }
+        this.hidden = true;
+        this.hiddenReason = requireText(hiddenReason, "hiddenReason");
+        this.hiddenByAdmin = Objects.requireNonNull(hiddenByAdmin, "hiddenByAdmin must not be null");
+        this.hiddenAt = Objects.requireNonNull(hiddenAt, "hiddenAt must not be null");
+    }
+
+    public void restore() {
+        if (deleted) {
+            throw new IllegalStateException("deleted petition cannot be restored");
+        }
+        this.hidden = false;
+    }
     public void delete(LocalDateTime deletedAt) {
         validateEditable();
         this.deleted = true;
@@ -223,6 +244,10 @@ public class Petition extends BaseEntity {
 
     public LocalDateTime getHiddenAt() {
         return hiddenAt;
+    }
+
+    public Admin getHiddenByAdmin() {
+        return hiddenByAdmin;
     }
 
     public boolean isDeleted() {

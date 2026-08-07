@@ -2,6 +2,7 @@ package org.skhuconnect.comment.entity;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.ColumnDefault;
+import org.skhuconnect.admin.entity.Admin;
 import org.skhuconnect.global.entity.BaseEntity;
 import org.skhuconnect.petition.entity.Petition;
 import org.skhuconnect.user.entity.User;
@@ -36,8 +37,8 @@ public class Comment extends BaseEntity {
     private String hiddenReason;
     @Column(name = "hidden_at")
     private LocalDateTime hiddenAt;
-    @Column(name = "hidden_by_admin_id")
-    private Long hiddenByAdminId;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "hidden_by_admin_id")
+    private Admin hiddenByAdmin;
     @Column(name = "deleted", nullable = false) @ColumnDefault("false")
     private boolean deleted;
     @Column(name = "deleted_at")
@@ -72,6 +73,17 @@ public class Comment extends BaseEntity {
         if (deleted) throw new IllegalStateException("deleted comment cannot be updated");
         this.content = requireContent(content);
     }
+    public void hide(String hiddenReason, Admin hiddenByAdmin, LocalDateTime hiddenAt) {
+        if (deleted) throw new IllegalStateException("deleted comment cannot be hidden");
+        this.hidden = true;
+        this.hiddenReason = requireContentModerationReason(hiddenReason);
+        this.hiddenByAdmin = Objects.requireNonNull(hiddenByAdmin, "hiddenByAdmin must not be null");
+        this.hiddenAt = Objects.requireNonNull(hiddenAt, "hiddenAt must not be null");
+    }
+    public void restore() {
+        if (deleted) throw new IllegalStateException("deleted comment cannot be restored");
+        this.hidden = false;
+    }
     public void delete(LocalDateTime deletedAt) {
         if (deleted) throw new IllegalStateException("comment is already deleted");
         this.deleted = true;
@@ -79,6 +91,12 @@ public class Comment extends BaseEntity {
     }
     public boolean isWrittenBy(Long userId) { return writer.getId().equals(userId); }
     public boolean isReply() { return parentComment != null; }
+    private static String requireContentModerationReason(String reason) {
+        Objects.requireNonNull(reason, "hiddenReason must not be null");
+        if (reason.isBlank()) throw new IllegalArgumentException("hiddenReason must not be blank");
+        if (reason.length() > 500) throw new IllegalArgumentException("hiddenReason must not exceed 500 characters");
+        return reason;
+    }
     private static String requireContent(String content) {
         Objects.requireNonNull(content, "content must not be null");
         if (content.isBlank()) throw new IllegalArgumentException("content must not be blank");
@@ -94,7 +112,7 @@ public class Comment extends BaseEntity {
     public boolean isHidden() { return hidden; }
     public String getHiddenReason() { return hiddenReason; }
     public LocalDateTime getHiddenAt() { return hiddenAt; }
-    public Long getHiddenByAdminId() { return hiddenByAdminId; }
+    public Admin getHiddenByAdmin() { return hiddenByAdmin; }
     public boolean isDeleted() { return deleted; }
     public LocalDateTime getDeletedAt() { return deletedAt; }
 }

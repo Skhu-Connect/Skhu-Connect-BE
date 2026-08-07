@@ -16,6 +16,9 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     @EntityGraph(attributePaths = {"anonymousNumber", "writer"})
     Page<Comment> findByPetitionIdAndDeletedFalse(Long petitionId, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"anonymousNumber", "writer", "parentComment"})
+    Page<Comment> findByPetitionIdAndDeletedFalseOrderByCreatedAtDescIdDesc(Long petitionId, Pageable pageable);
+
     @EntityGraph(attributePaths = {"anonymousNumber", "writer"})
     @Query(value = "select c from Comment c where c.petition.id = :petitionId and c.parentComment is null " +
             "and (c.deleted = false or exists (select r.id from Comment r where r.parentComment = c and r.deleted = false))",

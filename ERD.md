@@ -1291,14 +1291,11 @@ GET /connect/admin/threshold-settings/history
 
 상세 트랜잭션 순서는 `12.1 PetitionAnonymousNumber`를 따른다.
 
-## 21.7 상태별 동작
+## 21.7 Content moderation recovery policy
 
-다음 정책은 아직 미확정이다.
-
-- 사용자 삭제 댓글의 화면 표시 방식
-- 삭제된 청원의 관리자 화면 노출 여부
-- 숨김 해제 시 기존 숨김 사유 보존 여부
-
+- Administrator management APIs list and manage only `deleted = false` petitions and comments; user deletion remains separate from administrator hiding.
+- Restoring a petition, comment, or reply changes only `hidden` to `false`.
+- `hidden_reason`, `hidden_by_admin_id`, and `hidden_at` preserve the latest hide processing record after restoration.
 ## 21.8 사용자 알림 정책
 
 사용자 알림 유형, 수신 대상, 중복 방지, 읽음 및 조회 정책은 Notification 절과 실제 Notification 코드에 구현되어 있다. 공식 답변 알림의 호출 연결은 후속 범위다.

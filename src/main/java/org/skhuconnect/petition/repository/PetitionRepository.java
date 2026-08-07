@@ -4,6 +4,7 @@ import jakarta.persistence.LockModeType;
 import org.skhuconnect.petition.entity.Petition;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
@@ -16,6 +17,9 @@ public interface PetitionRepository extends JpaRepository<Petition, Long>,
         JpaSpecificationExecutor<Petition> {
 
     Optional<Petition> findByIdAndDeletedFalse(Long id);
+
+    @EntityGraph(attributePaths = "writer")
+    Page<Petition> findByDeletedFalse(Pageable pageable);
 
     Optional<Petition> findByIdAndDeletedFalseAndHiddenFalse(Long id);
 
