@@ -57,7 +57,7 @@ OfficialAnswerHistory
 ThresholdSettingHistory
 ```
 
-따라서 관리자·공식 답변·운영 알림 로그와 각 변경 이력은 현재 DB 스키마가 아니라 후속 구현 범위다.
+따라서 OfficialAnswerHistory와 ThresholdSettingHistory는 현재 DB 스키마가 아니라 후속 구현 범위다.
 
 ---
 
