@@ -7,6 +7,7 @@ import com.google.firebase.messaging.*;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import org.skhuconnect.notification.dto.NotificationResponse;
 import org.skhuconnect.notification.entity.FcmToken;
 import org.skhuconnect.notification.entity.Notification;
 import org.skhuconnect.notification.repository.FcmTokenRepository;
@@ -21,8 +22,15 @@ public class FcmPushService {
     public void send(Notification notification) {
         if (serviceAccountJson == null || serviceAccountJson.isBlank()) return;
         FirebaseMessaging messaging = messaging();
+        Message.Builder base = Message.builder()
+                .setNotification(com.google.firebase.messaging.Notification.builder()
+                        .setTitle("성공잇다")
+                        .setBody(NotificationResponse.message(notification.getType()))
+                        .build())
+                .putData("notificationId", String.valueOf(notification.getId()));
+        if (notification.getPetition() != null) base.putData("petitionId", String.valueOf(notification.getPetition().getId()));
         for (FcmToken token : tokens.findByUserId(notification.getReceiver().getId())) {
-            try { messaging.send(Message.builder().setToken(token.getToken()).setNotification(com.google.firebase.messaging.Notification.builder().setTitle("SKHU Connect").setBody(notification.getType().name()).build()).putData("notificationId", String.valueOf(notification.getId())).build()); }
+            try { messaging.send(base.setToken(token.getToken()).build()); }
             catch (FirebaseMessagingException exception) { if (isInvalid(exception)) tokens.delete(token); }
         }
     }
