@@ -1,6 +1,8 @@
 package org.skhuconnect.petition.service;
 
+import org.skhuconnect.admin.answer.repository.OfficialAnswerRepository;
 import org.skhuconnect.petition.dto.request.PetitionCreateRequest;
+import org.skhuconnect.petition.dto.response.OfficialAnswerDetailResponse;
 import org.skhuconnect.petition.dto.request.PetitionQueryCondition;
 import org.skhuconnect.petition.dto.request.PetitionUpdateRequest;
 import org.skhuconnect.petition.dto.response.PetitionPageResponse;
@@ -39,17 +41,20 @@ public class PetitionService {
     private final PetitionRepository petitionRepository;
     private final UserRepository userRepository;
     private final ThresholdSettingRepository thresholdSettingRepository;
+    private final OfficialAnswerRepository officialAnswerRepository;
     private final Clock clock;
 
     public PetitionService(
             PetitionRepository petitionRepository,
             UserRepository userRepository,
             ThresholdSettingRepository thresholdSettingRepository,
+            OfficialAnswerRepository officialAnswerRepository,
             Clock clock
     ) {
         this.petitionRepository = petitionRepository;
         this.userRepository = userRepository;
         this.thresholdSettingRepository = thresholdSettingRepository;
+        this.officialAnswerRepository = officialAnswerRepository;
         this.clock = clock;
     }
 
@@ -80,7 +85,7 @@ public class PetitionService {
                         PetitionSpecification.query(condition, now),
                         pageRequest
                 )
-                .map(petition -> PetitionQueryResponse.from(petition, now));
+                .map(petition -> PetitionQueryResponse.from(petition, now, null));
         return PetitionPageResponse.from(result);
     }
 
@@ -89,7 +94,11 @@ public class PetitionService {
         Petition petition = petitionRepository.findByIdAndDeletedFalseAndHiddenFalse(
                         petitionId)
                 .orElseThrow(() -> new PetitionException(Reason.PETITION_NOT_FOUND));
-        return PetitionQueryResponse.from(petition, LocalDateTime.now(clock));
+        OfficialAnswerDetailResponse officialAnswer = officialAnswerRepository
+                .findByPetitionId(petitionId)
+                .map(OfficialAnswerDetailResponse::from)
+                .orElse(null);
+        return PetitionQueryResponse.from(petition, LocalDateTime.now(clock), officialAnswer);
     }
 
     @Transactional

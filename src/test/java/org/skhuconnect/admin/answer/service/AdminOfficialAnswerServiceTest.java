@@ -119,6 +119,20 @@ class AdminOfficialAnswerServiceTest {
     }
 
     @Test
+    void findsExistingAnswerWithoutChangingPetitionOrSendingNotification() {
+        stubAdminAndVisiblePetition();
+        OfficialAnswer answer = OfficialAnswer.create(petition, admin, "stored", AnswerSource.OPERATION_TEAM);
+        when(petitions.findByIdAndDeletedFalseAndHiddenFalse(10L)).thenReturn(Optional.of(petition));
+        when(answers.findByPetitionId(10L)).thenReturn(Optional.of(answer));
+
+        var response = service.find(7L, 10L);
+
+        assertThat(response.content()).isEqualTo("stored");
+        assertThat(petition.getStatus()).isEqualTo(PetitionStatus.UNDER_REVIEW);
+        verify(notifications, never()).onPetitionAnswered(any());
+    }
+
+    @Test
     void notificationFailurePropagatesFromTransactionalRegistration() throws Exception {
         stubAdminAndVisiblePetition();
         when(answers.findByPetitionId(10L)).thenReturn(Optional.empty());

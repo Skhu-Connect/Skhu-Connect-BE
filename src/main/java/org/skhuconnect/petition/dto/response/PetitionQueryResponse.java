@@ -1,5 +1,6 @@
 package org.skhuconnect.petition.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import org.skhuconnect.petition.entity.Petition;
 import org.skhuconnect.petition.entity.PetitionCategory;
 import org.skhuconnect.petition.entity.PetitionStatus;
@@ -16,9 +17,15 @@ public record PetitionQueryResponse(
         int targetAgreementCount,
         LocalDateTime expiresAt,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        OfficialAnswerDetailResponse officialAnswer
 ) {
-    public static PetitionQueryResponse from(Petition petition, LocalDateTime now) {
+    public static PetitionQueryResponse from(
+            Petition petition,
+            LocalDateTime now,
+            OfficialAnswerDetailResponse officialAnswer
+    ) {
         return new PetitionQueryResponse(
                 petition.getId(),
                 petition.getCategory(),
@@ -29,8 +36,13 @@ public record PetitionQueryResponse(
                 petition.getTargetAgreementCount(),
                 petition.getAgreementDeadline(),
                 petition.getCreatedAt(),
-                petition.getUpdatedAt()
+                petition.getUpdatedAt(),
+                officialAnswer
         );
+    }
+
+    public static PetitionQueryResponse from(Petition petition, LocalDateTime now) {
+        return from(petition, now, null);
     }
 
     private static PetitionStatus effectiveStatus(Petition petition, LocalDateTime now) {

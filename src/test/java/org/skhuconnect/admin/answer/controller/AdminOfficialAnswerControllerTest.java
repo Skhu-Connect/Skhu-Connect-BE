@@ -16,6 +16,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -46,6 +47,11 @@ class AdminOfficialAnswerControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.petitionId").value(10))
                 .andExpect(jsonPath("$.answerSource").value("SCHOOL_OFFICIAL"));
+        when(service.find(7L, 10L)).thenReturn(response("loaded"));
+        mockMvc.perform(get("/connect/admin/petitions/10/answer")
+                        .requestAttr("adminId", 7L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").value("loaded"));
         mockMvc.perform(put("/connect/admin/petitions/10/answer")
                         .requestAttr("adminId", 7L)
                         .contentType(MediaType.APPLICATION_JSON)

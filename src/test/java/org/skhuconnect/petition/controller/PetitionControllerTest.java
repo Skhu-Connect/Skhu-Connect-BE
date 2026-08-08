@@ -6,6 +6,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.skhuconnect.petition.dto.request.PetitionCreateRequest;
 import org.skhuconnect.petition.dto.request.PetitionUpdateRequest;
+import org.skhuconnect.admin.answer.entity.AnswerSource;
+import org.skhuconnect.petition.dto.response.OfficialAnswerDetailResponse;
 import org.skhuconnect.petition.dto.response.PetitionPageResponse;
 import org.skhuconnect.petition.dto.response.PetitionQueryResponse;
 import org.skhuconnect.petition.dto.response.PetitionResponse;
@@ -176,7 +178,18 @@ class PetitionControllerTest {
         mockMvc.perform(get("/connect/petitions/10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(10))
-                .andExpect(jsonPath("$.expiresAt").exists());
+                .andExpect(jsonPath("$.expiresAt").exists())
+                .andExpect(jsonPath("$.officialAnswer").doesNotExist());
+    }
+
+    @Test
+    void answeredPetitionDetailIncludesOfficialAnswer() throws Exception {
+        when(service.findDetail(10L)).thenReturn(queryResponseWithOfficialAnswer());
+
+        mockMvc.perform(get("/connect/petitions/10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.officialAnswer.content").value("official answer"))
+                .andExpect(jsonPath("$.officialAnswer.answerSource").value("SCHOOL_OFFICIAL"));
     }
 
     @Test
@@ -257,9 +270,19 @@ class PetitionControllerTest {
                 10,
                 now.plusDays(30),
                 now,
-                now
+                now,
+                null
         );
     }
+    private PetitionQueryResponse queryResponseWithOfficialAnswer() {
+        LocalDateTime now = LocalDateTime.of(2026, 8, 5, 12, 0);
+        return new PetitionQueryResponse(
+                10L, PetitionCategory.LIBRARY, PetitionStatus.ANSWERED,
+                "library", "content", 10, 10, now.plusDays(30), now, now,
+                new OfficialAnswerDetailResponse("official answer", AnswerSource.SCHOOL_OFFICIAL, now, now)
+        );
+    }
+
     private PetitionResponse response(String title, String content) {
         LocalDateTime now = LocalDateTime.of(2026, 8, 5, 12, 0);
         return new PetitionResponse(

@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import org.skhuconnect.admin.answer.dto.OfficialAnswerRequest;
 import org.skhuconnect.admin.answer.dto.OfficialAnswerResponse;
 import org.skhuconnect.admin.answer.service.AdminOfficialAnswerService;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -58,5 +59,18 @@ public class AdminOfficialAnswerController {
             @Valid @RequestBody OfficialAnswerRequest request
     ) {
         return service.update(adminId, petitionId, request);
+    }
+
+    @Operation(summary = "Get an official answer")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Official answer retrieved"),
+            @ApiResponse(responseCode = "404", description = "Administrator, petition, or official answer not found", content = @Content)
+    })
+    @GetMapping
+    public OfficialAnswerResponse find(
+            @RequestAttribute("adminId") Long adminId,
+            @PathVariable Long petitionId
+    ) {
+        return service.find(adminId, petitionId);
     }
 }

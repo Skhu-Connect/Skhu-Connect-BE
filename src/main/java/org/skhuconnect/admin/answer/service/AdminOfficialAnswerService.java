@@ -71,6 +71,16 @@ public class AdminOfficialAnswerService {
         return OfficialAnswerResponse.from(answer);
     }
 
+    @Transactional(readOnly = true)
+    public OfficialAnswerResponse find(Long adminId, Long petitionId) {
+        findAdmin(adminId);
+        petitionRepository.findByIdAndDeletedFalseAndHiddenFalse(petitionId)
+                .orElseThrow(() -> error(AdminOfficialAnswerException.Reason.PETITION_NOT_FOUND));
+        OfficialAnswer answer = officialAnswerRepository.findByPetitionId(petitionId)
+                .orElseThrow(() -> error(AdminOfficialAnswerException.Reason.OFFICIAL_ANSWER_NOT_FOUND));
+        return OfficialAnswerResponse.from(answer);
+    }
+
     @org.springframework.beans.factory.annotation.Autowired
     void setNotificationLogs(AdminNotificationLogService notificationLogs) { this.notificationLogs = notificationLogs; }
 

@@ -6,6 +6,7 @@ import org.mockito.ArgumentCaptor;
 import org.skhuconnect.petition.dto.request.PetitionCreateRequest;
 import org.skhuconnect.petition.dto.request.PetitionQueryCondition;
 import org.skhuconnect.petition.dto.request.PetitionUpdateRequest;
+import org.skhuconnect.admin.answer.repository.OfficialAnswerRepository;
 import org.skhuconnect.petition.dto.response.PetitionPageResponse;
 import org.skhuconnect.petition.dto.response.PetitionQueryResponse;
 import org.skhuconnect.petition.dto.response.PetitionResponse;
@@ -46,6 +47,7 @@ class PetitionServiceTest {
     private PetitionRepository petitionRepository;
     private UserRepository userRepository;
     private ThresholdSettingRepository thresholdSettingRepository;
+    private OfficialAnswerRepository officialAnswerRepository;
     private Clock clock;
     private PetitionService service;
 
@@ -54,10 +56,11 @@ class PetitionServiceTest {
         petitionRepository = mock(PetitionRepository.class);
         userRepository = mock(UserRepository.class);
         thresholdSettingRepository = mock(ThresholdSettingRepository.class);
+        officialAnswerRepository = mock(OfficialAnswerRepository.class);
         clock = Clock.fixed(Instant.parse("2026-08-05T03:00:00Z"),
                 ZoneId.of("Asia/Seoul"));
         service = new PetitionService(
-                petitionRepository, userRepository, thresholdSettingRepository, clock);
+                petitionRepository, userRepository, thresholdSettingRepository, officialAnswerRepository, clock);
     }
 
     @Test
@@ -246,6 +249,23 @@ class PetitionServiceTest {
                 .isInstanceOf(PetitionException.class)
                 .extracting("reason")
                 .isEqualTo(PetitionException.Reason.INVALID_SORT);
+    }
+
+    @Test
+    void detailIncludesOfficialAnswerWithoutExposingAdministratorIdentity() {
+        Petition petition = petition(mockUser(1L));
+        org.skhuconnect.admin.answer.entity.OfficialAnswer answer = mock(org.skhuconnect.admin.answer.entity.OfficialAnswer.class);
+        when(answer.getContent()).thenReturn("official answer");
+        when(answer.getAnswerSource()).thenReturn(org.skhuconnect.admin.answer.entity.AnswerSource.SCHOOL_OFFICIAL);
+        when(answer.getCreatedAt()).thenReturn(LocalDateTime.of(2026, 8, 5, 12, 0));
+        when(answer.getUpdatedAt()).thenReturn(LocalDateTime.of(2026, 8, 5, 12, 0));
+        when(petitionRepository.findByIdAndDeletedFalseAndHiddenFalse(10L)).thenReturn(Optional.of(petition));
+        when(officialAnswerRepository.findByPetitionId(10L)).thenReturn(Optional.of(answer));
+
+        PetitionQueryResponse response = service.findDetail(10L);
+
+        assertThat(response.officialAnswer().content()).isEqualTo("official answer");
+        assertThat(response.officialAnswer().answerSource()).isEqualTo(org.skhuconnect.admin.answer.entity.AnswerSource.SCHOOL_OFFICIAL);
     }
 
     @Test
