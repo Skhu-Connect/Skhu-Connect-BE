@@ -44,15 +44,15 @@ Comment
 PetitionAnonymousNumber
 CommentLike
 Notification
+Admin
+OfficialAnswer
+NotificationLog
 ThresholdSetting
 ```
 
 다음 항목은 후속 설계이며 현재 코드에 Entity가 없다.
 
 ```text
-Admin
-OfficialAnswer
-NotificationLog
 OfficialAnswerHistory
 ThresholdSettingHistory
 ```
