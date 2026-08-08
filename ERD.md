@@ -367,7 +367,7 @@ FOREIGN KEY(user_id) REFERENCES users(id)
 - 활성 행에서 만료가 확인된 토큰은 `TOKEN_EXPIRED`로 처리한다.
 - Redis는 MVP에서 사용하지 않는다.
 
-관리자 Refresh Token 저장 방식은 현재 확정되지 않았으므로 본 Entity에는 사용자 Token만 포함한다.
+관리자 Refresh Token은 별도 `admin_refresh_tokens` 테이블에서 사용자 Token과 분리해 저장한다.
 
 ---
 
@@ -397,7 +397,7 @@ petitions
 | `review_started_at` | `DATETIME(6)` | 가능 |  | 임계치 도달 시각 |
 | `hidden` | `BOOLEAN` | 불가 | DEFAULT FALSE | 관리자 숨김 여부 |
 | `hidden_reason` | `VARCHAR(500)` | 가능 |  | 숨김 사유 |
-| `hidden_at` | `DATETIME(6)` | 가능 |  | 숨김 또는 숨김 해제 처리 시각 |
+| `hidden_at` | `DATETIME(6)` | 가능 |  | 마지막 숨김 처리 시각 |
 | `hidden_by_admin_id` | `BIGINT` | 가능 | FK | 마지막 숨김 처리 관리자 |
 | `deleted` | `BOOLEAN` | 불가 | DEFAULT FALSE | 작성자 삭제 여부 |
 | `deleted_at` | `DATETIME(6)` | 가능 |  | 작성자 삭제 시각 |
@@ -596,7 +596,7 @@ comments
 | `parent_comment_id` | `BIGINT` | 가능 | FK, SELF REFERENCE | 원댓글 식별자, NULL이면 원댓글 |
 | `hidden` | `BOOLEAN` | 불가 | DEFAULT FALSE | 관리자 숨김 여부 |
 | `hidden_reason` | `VARCHAR(500)` | 가능 |  | 숨김 사유 |
-| `hidden_at` | `DATETIME(6)` | 가능 |  | 숨김 또는 숨김 해제 처리 시각 |
+| `hidden_at` | `DATETIME(6)` | 가능 |  | 마지막 숨김 처리 시각 |
 | `hidden_by_admin_id` | `BIGINT` | 가능 | FK | 마지막 숨김 처리 관리자 |
 | `deleted` | `BOOLEAN` | 불가 | DEFAULT FALSE | 작성자 삭제 여부 |
 | `deleted_at` | `DATETIME(6)` | 가능 |  | 작성자 삭제 시각 |
@@ -874,14 +874,16 @@ SCHOOL_OFFICIAL
 
 ## 비즈니스 규칙
 
-- 청원 하나에는 공식 답변 하나만 등록할 수 있다.
+- 청원 하나에는 공식 답변 하나만 등록할 수 있으며, 최초 등록은 `UNDER_REVIEW` 상태에서만 가능하다.
 - 공식 답변은 최대 1,000자이다.
 - 답변 등록과 동시에 청원 상태를 `ANSWERED`로 변경한다.
 - 공식 답변은 등록 후 수정할 수 있다.
 - 첨부파일과 임시 저장은 MVP에서 제외한다.
 - 만료 청원에는 기본적으로 공식 답변을 등록하지 않는다.
 
-답변 수정 이력 조회 API는 History Entity가 없어 현재 ERD만으로 구현할 수 없다.
+- 관리자 API는 공식 답변을 등록·수정·조회한다.
+- 사용자 청원 상세 응답은 답변이 있을 때 `officialAnswer`(내용, 출처, 등록·수정 시각)를 포함한다.
+- 답변 수정 이력 조회는 History Entity가 없어 후속 범위다.
 
 ---
 
@@ -891,10 +893,7 @@ SCHOOL_OFFICIAL
 
 ## 현재 구현 범위
 
-현재 사용자 웹에서는 청원 생성 시 목표 동의 수를 계산하기 위한 기본 임계치 도메인만 구현한다.
-
-관리자 정보, 변경 사유, 관리자 수정 기능과 변경 이력은 후속 관리자 웹 범위로 분리한다.
-
+관리자는 `threshold_settings`를 조회·수정할 수 있다. 수정 시 변경 사유와 처리 관리자를 기록하며, 변경값은 이후 생성되는 청원에만 적용한다. 변경 이력 Entity와 조회 API는 후속 범위다.
 ## 테이블명
 
 ```text
@@ -910,6 +909,8 @@ threshold_settings
 | `total_student_count` | `INT` | 불가 |  | 학교 전체 기준 학생 수 |
 | `threshold_rate` | `DECIMAL(5,4)` | 불가 |  | 카테고리별 임계 비율 |
 | `minimum_count` | `INT` | 불가 |  | 최소 임계 인원 |
+| `updated_by_admin_id` | `BIGINT` | 가능 | FK | 마지막 변경 관리자 |
+| `change_reason` | `VARCHAR(500)` | 가능 |  | 마지막 변경 사유 |
 | `created_at` | `DATETIME(6)` | 불가 |  | 생성 시각 |
 | `updated_at` | `DATETIME(6)` | 불가 |  | 마지막 변경 시각 |
 
@@ -953,30 +954,14 @@ ThresholdSetting 생성 시 `totalStudentCount`, `thresholdRate`, `minimumCount`
 - 변경된 설정은 이후 생성되는 청원부터 적용한다.
 - 기존 청원의 `target_agreement_count`는 변경하지 않는다.
 
-## 후속 관리자 웹 범위
-
-다음 필드와 관계는 Admin Entity 및 관리자 임계치 수정 기능 구현 시 추가한다.
-
-| 컬럼 | 타입 | Null | 제약조건 | 설명 |
-|---|---|---:|---|---|
-| `updated_by_admin_id` | `BIGINT` | 가능 | FK | 마지막 변경 관리자 |
-| `change_reason` | `VARCHAR(500)` | 가능 |  | 마지막 변경 사유 |
-
-관계:
+## 관리자 변경 메타데이터
 
 ```text
 Admin 1 : N ThresholdSetting Update
-```
-
-후속 제약조건:
-
-```text
 FOREIGN KEY(updated_by_admin_id) REFERENCES admins(id)
 ```
 
-관리자 변경은 이후 생성되는 청원에만 적용하며 기존 청원의 `target_agreement_count`는 변경하지 않는다.
-
-임계치 변경 이력 Entity와 조회 API는 별도 후속 범위이다.
+관리자 변경은 이후 생성되는 청원에만 적용하며 기존 청원의 `target_agreement_count`는 변경하지 않는다. 임계치 변경 이력 Entity와 조회 API는 별도 후속 범위다.
 
 ---
 
@@ -997,8 +982,8 @@ notification_logs
 | `id` | `BIGINT` | 불가 | PK, AUTO_INCREMENT | 로그 식별자 |
 | `type` | `VARCHAR(50)` | 불가 |  | 관리자 알림 로그 유형 |
 | `admin_id` | `BIGINT` | 가능 | FK | 관련 관리자 |
-| `target_type` | `VARCHAR(30)` | 가능 |  | 관련 대상 종류 |
-| `target_id` | `BIGINT` | 가능 |  | 관련 대상 식별자 |
+| `target_type` | `VARCHAR(30)` | 불가 |  | 관련 대상 종류 |
+| `target_id` | `BIGINT` | 불가 |  | 관련 대상 식별자 |
 | `description` | `VARCHAR(1000)` | 불가 |  | 로그 설명 |
 | `created_at` | `DATETIME(6)` | 불가 |  | 생성 시각 |
 | `updated_at` | `DATETIME(6)` | 불가 |  | 수정 시각 |
@@ -1027,10 +1012,10 @@ FOREIGN KEY(admin_id) REFERENCES admins(id)
 THRESHOLD_REACHED
 ANSWER_REGISTERED
 ANSWER_UPDATED
-REVIEW_DEADLINE_APPROACHING
-REVIEW_DEADLINE_EXCEEDED
 PETITION_HIDDEN
+PETITION_RESTORED
 COMMENT_HIDDEN
+COMMENT_RESTORED
 THRESHOLD_SETTING_UPDATED
 ```
 
@@ -1042,7 +1027,7 @@ THRESHOLD_SETTING_UPDATED
 - 자동 발생 이벤트는 `admin_id` 없이 생성할 수 있다.
 - 관리자 작업 이벤트는 처리한 관리자 ID를 저장한다.
 
-`target_type`의 구체적인 Enum 값은 로그 API 구현 시 확정한다.
+`target_type`은 `PETITION`, `COMMENT`, `THRESHOLD_SETTING`을 사용한다.
 
 ---
 
@@ -1183,13 +1168,13 @@ hidden_by_admin_id = 처리 관리자
 
 숨김 해제 시 `hidden`을 `false`로 변경한다.
 
-숨김 해제 후 사유와 처리 관리자 정보를 유지할지 초기화할지는 구현 전에 확정한다.
+숨김 해제 시 `hidden`만 `false`로 변경하고 마지막 숨김 사유·처리 관리자·처리 시각은 보존한다.
 
 ## 조회 원칙
 
 - 일반 사용자 목록에서는 `deleted = false`, `hidden = false` 데이터만 조회한다.
 - 관리자는 숨김 데이터를 조회할 수 있다.
-- 사용자가 삭제한 데이터를 관리자 화면에서 조회할지는 아직 확정되지 않았다.
+- 관리자 목록은 `deleted = false` 데이터만 대상으로 하며, 숨김 데이터는 포함한다.
 - 숨김 댓글은 원문 대신 안내 문구를 반환한다.
 - 삭제 댓글의 표시 방식은 아직 확정되지 않았다.
 
@@ -1263,22 +1248,6 @@ admin_refresh_tokens
 - Tokens expire after 14 days and rotate on refresh.
 - The administrator cookie is named `adminRefreshToken` and is scoped to `/connect/admin/auth`.
 - The user `refreshToken` cookie and `refresh_tokens` table are not used by administrator authentication.
-## 21.4 답변 수정 이력
-
-다음 API가 존재하지만 `OfficialAnswerHistory`는 MVP Entity에서 제외되어 있다.
-
-```text
-GET /connect/admin/petitions/{petitionId}/answer/history
-```
-
-## 21.5 임계치 변경 이력
-
-다음 API가 존재하지만 `ThresholdSettingHistory`는 MVP Entity에서 제외되어 있다.
-
-```text
-GET /connect/admin/threshold-settings/history
-```
-
 ## 21.6 익명 번호 동시성 확정
 
 익명 번호 동시성 정책은 다음과 같이 확정하였다.
@@ -1298,7 +1267,7 @@ GET /connect/admin/threshold-settings/history
 - `hidden_reason`, `hidden_by_admin_id`, and `hidden_at` preserve the latest hide processing record after restoration.
 ## 21.8 사용자 알림 정책
 
-사용자 알림 유형, 수신 대상, 중복 방지, 읽음 및 조회 정책은 Notification 절과 실제 Notification 코드에 구현되어 있다. 공식 답변 알림의 호출 연결은 후속 범위다.
+사용자 알림 유형, 수신 대상, 중복 방지, 읽음 및 조회 정책은 Notification 절과 실제 Notification 코드에 구현되어 있다. 공식 답변 최초 등록 시 기존 `PETITION_ANSWERED` 사용자 알림 흐름을 호출한다.
 
 ---
 
