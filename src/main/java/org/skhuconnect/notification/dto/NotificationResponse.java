@@ -12,7 +12,7 @@ public record NotificationResponse(Long id, NotificationType type, String messag
                 n.getComment() == null ? null : n.getComment().getId(),
                 n.isRead(), n.getCreatedAt());
     }
-    private static String message(NotificationType type) {
+    public static String message(NotificationType type) {
         return switch (type) {
             case PETITION_AGREEMENT_60_PERCENT -> "청원이 목표 동의 수의 60%에 도달했습니다.";
             case PETITION_AGREEMENT_100_PERCENT -> "청원이 목표 동의 수를 달성했습니다.";
