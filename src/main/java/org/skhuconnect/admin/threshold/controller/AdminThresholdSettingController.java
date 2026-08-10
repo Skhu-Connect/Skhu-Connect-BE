@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@Tag(name = "관리자 임계치 설정s", description = "Administrator threshold setting API")
+@Tag(name = "愿由ъ옄 ?꾧퀎移??ㅼ젙s", description = "관리자 임계치 설정 API")
 @RestController
 @RequestMapping("/connect/admin/threshold-settings")
 public class AdminThresholdSettingController {
@@ -31,14 +31,14 @@ public class AdminThresholdSettingController {
         this.service = service;
     }
 
-    @Operation(summary = "List threshold settings")
+    @Operation(summary = "관리자 임계치 설정 조회")
     @ApiResponse(responseCode = "200", description = "Settings retrieved")
     @GetMapping
     public List<AdminThresholdSettingResponse> findAll() {
         return service.findAll();
     }
 
-    @Operation(summary = "Update threshold setting")
+    @Operation(summary = "관리자 임계치 설정 수정")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Setting updated"),
             @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content),
