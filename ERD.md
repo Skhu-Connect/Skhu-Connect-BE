@@ -55,6 +55,8 @@ ThresholdSetting
 ```text
 OfficialAnswerHistory
 ThresholdSettingHistory
+Report
+Notice
 ```
 
 따라서 OfficialAnswerHistory와 ThresholdSettingHistory는 현재 DB 스키마가 아니라 후속 구현 범위다.
@@ -1310,3 +1312,16 @@ Codex는 다음 원칙을 따른다.
 - target_type values: PETITION, COMMENT, THRESHOLD_SETTING.
 - NotificationLogType additionally includes PETITION_RESTORED and COMMENT_RESTORED.
 - THRESHOLD_REACHED stores a null admin_id; direct administrator actions store the processor.
+
+---
+# 22. 관리자 웹 2차 정책 예정 Entity
+
+## Report
+
+신고 대상은 청원·댓글·대댓글이며, 동일 사용자·동일 대상 조합은 한 번만 신고한다. 신고 상태는 PENDING, DISMISSED, ACTION_TAKEN을 사용하고 신고 유형·상세 사유·처리 관리자·처리 시각·처리 사유를 기록한다. ACTION_TAKEN은 기존 콘텐츠 hidden 정책을 재사용하며, 이미 숨김인 콘텐츠의 숨김 이력은 덮어쓰지 않는다.
+
+## Notice
+
+공지 상태는 DRAFT, PUBLISHED, HIDDEN을 사용한다. 최초 PUBLISHED 전환에서만 기존 사용자 Notification/FCM으로 전체 알림을 발송하고, 수정·숨김·재공개에서는 재발송하지 않는다. 공개 공지만 사용자에게 노출하며 물리 삭제하지 않는다.
+
+대시보드는 별도 Entity 없이 현재 누적 기준의 사용자 수, 청원 상태별 수, 동의 수, 댓글 수, 미처리 신고 수를 집계한다. 기간별·추가 통계는 후속 범위다.

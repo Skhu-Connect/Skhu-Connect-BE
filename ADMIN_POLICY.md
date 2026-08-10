@@ -73,3 +73,28 @@
 - target_type: PETITION, COMMENT, THRESHOLD_SETTING.
 - Restore events use PETITION_RESTORED and COMMENT_RESTORED.
 - Automatic threshold events store admin_id as null; administrator actions store the processing administrator.
+
+## 8. 신고 정책 (2차)
+
+- 인증 사용자만 청원·댓글·대댓글을 신고할 수 있다.
+- 동일 사용자는 동일 대상에 한 번만 신고할 수 있다.
+- 신고는 PENDING → DISMISSED 또는 ACTION_TAKEN으로 처리한다.
+- 신고 유형과 상세 사유, 처리 관리자·처리 시각·처리 사유를 기록한다.
+- ACTION_TAKEN 시 기존 관리자 hidden 정책을 재사용한다.
+- 이미 숨김인 콘텐츠는 기존 숨김 이력을 덮어쓰지 않는다.
+- 사용자 deleted와 관리자 hidden은 분리한다.
+
+## 9. 공지사항·전체 알림 정책 (2차)
+
+- 공지는 DRAFT → PUBLISHED → HIDDEN 상태로 관리한다.
+- 최초 PUBLISHED 전환 시 기존 사용자 Notification/FCM 흐름으로 전체 알림을 한 번만 발송한다.
+- 수정·숨김·재공개 시 알림을 재발송하지 않는다.
+- notification_enabled=false 사용자는 전체 알림 수신 대상에서 제외한다.
+- 공개된 공지만 사용자에게 노출하며 물리 삭제하지 않는다.
+
+## 10. 관리자 대시보드 정책 (2차)
+
+- 기간별 집계 없이 현재 누적 수치만 제공한다.
+- 제공 지표는 사용자 수, 청원 상태별 수, 동의 수, 댓글 수, 미처리 신고 수다.
+- 기존 hidden/deleted 및 신고 처리 상태 기준을 재사용한다.
+- 기간별·추가 통계는 범위에서 제외한다.
