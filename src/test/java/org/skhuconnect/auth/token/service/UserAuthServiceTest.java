@@ -118,6 +118,34 @@ class UserAuthServiceTest {
     }
 
     @Test
+    void withdrawnUserCannotLogin() {
+        when(users.findByLoginIdForUpdate("withdrawn")).thenReturn(Optional.of(user));
+        when(user.isDeleted()).thenReturn(true);
+
+        assertThatThrownBy(() -> service.login("withdrawn", "password"))
+                .isInstanceOf(UserAuthException.class)
+                .extracting("reason")
+                .isEqualTo(UserAuthException.Reason.INVALID_CREDENTIALS);
+        verify(passwords, never()).matches(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test
+    void withdrawnUserCannotRefresh() {
+        RefreshToken token = RefreshToken.create(user, "w".repeat(64),
+                LocalDateTime.of(2030, 1, 2, 0, 0));
+        when(opaqueTokens.hash("withdrawn-token")).thenReturn("w".repeat(64));
+        when(tokens.findByTokenHash("w".repeat(64))).thenReturn(Optional.of(token));
+        when(user.isDeleted()).thenReturn(true);
+
+        assertThatThrownBy(() -> service.refresh("withdrawn-token"))
+                .isInstanceOf(UserAuthException.class)
+                .extracting("reason")
+                .isEqualTo(UserAuthException.Reason.TOKEN_INVALID);
+    }
+
+    @Test
     void operationsHaveTransactionBoundaries() throws Exception {
         assertThat(UserAuthService.class.getMethod("login", String.class, String.class)
                 .getAnnotation(Transactional.class)).isNotNull();

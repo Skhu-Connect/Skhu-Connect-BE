@@ -5,6 +5,7 @@ public class SignupException extends RuntimeException {
     public enum Reason {
         LOGIN_ID_ALREADY_EXISTS,
         EMAIL_ALREADY_EXISTS,
+        REJOIN_RESTRICTED,
         DEPARTMENT_NOT_FOUND
     }
 

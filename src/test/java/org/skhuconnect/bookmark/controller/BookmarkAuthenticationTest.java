@@ -25,7 +25,10 @@ class BookmarkAuthenticationTest {
     @BeforeEach
     void setUp() {
         jwtDecoder = mock(JwtDecoder.class);
-        filter = new AccessTokenAuthenticationFilter(jwtDecoder);
+        org.skhuconnect.user.repository.UserRepository users =
+                mock(org.skhuconnect.user.repository.UserRepository.class);
+        filter = new AccessTokenAuthenticationFilter(jwtDecoder, users);
+        when(users.existsByIdAndDeletedFalse(org.mockito.ArgumentMatchers.anyLong())).thenReturn(true);
         filterChain = mock(FilterChain.class);
     }
 

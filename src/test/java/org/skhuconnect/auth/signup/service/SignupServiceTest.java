@@ -10,6 +10,8 @@ import org.skhuconnect.auth.signup.exception.SignupException;
 import org.skhuconnect.department.entity.Department;
 import org.skhuconnect.department.repository.DepartmentRepository;
 import org.skhuconnect.user.entity.User;
+import org.skhuconnect.user.repository.UserWithdrawalHistoryRepository;
+import org.skhuconnect.user.service.UserEmailHasher;
 import org.skhuconnect.user.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -29,15 +34,20 @@ class SignupServiceTest {
     private DepartmentRepository departmentRepository;
     private PasswordEncoder passwordEncoder;
     private SignupService service;
+    private UserWithdrawalHistoryRepository withdrawalHistories;
+    private UserEmailHasher emailHasher;
 
     @BeforeEach
     void setUp() {
         emailVerificationService = mock(EmailVerificationService.class);
         userRepository = mock(UserRepository.class);
         departmentRepository = mock(DepartmentRepository.class);
+        withdrawalHistories = mock(UserWithdrawalHistoryRepository.class);
+        emailHasher = mock(UserEmailHasher.class);
         passwordEncoder = mock(PasswordEncoder.class);
         service = new SignupService(emailVerificationService, userRepository,
-                departmentRepository, passwordEncoder);
+                departmentRepository, passwordEncoder, withdrawalHistories, emailHasher,
+                Clock.fixed(Instant.parse("2030-01-01T00:00:00Z"), ZoneOffset.UTC));
     }
 
     @Test

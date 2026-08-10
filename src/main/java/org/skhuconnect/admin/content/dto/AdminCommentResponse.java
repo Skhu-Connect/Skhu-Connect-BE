@@ -7,6 +7,8 @@ import java.time.LocalDateTime;
 public record AdminCommentResponse(
         Long id,
         Long parentCommentId,
+        Long writerId,
+        boolean writerDeleted,
         String content,
         int anonymousNumber,
         boolean hidden,
@@ -19,6 +21,7 @@ public record AdminCommentResponse(
     public static AdminCommentResponse from(Comment comment) {
         return new AdminCommentResponse(comment.getId(),
                 comment.getParentComment() == null ? null : comment.getParentComment().getId(),
+                comment.getWriter().getId(), comment.getWriter().isDeleted(),
                 comment.getContent(), comment.getAnonymousNumber().getAnonymousNumber(),
                 comment.isHidden(), comment.getHiddenReason(),
                 comment.getHiddenByAdmin() == null ? null : comment.getHiddenByAdmin().getId(),

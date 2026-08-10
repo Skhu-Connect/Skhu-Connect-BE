@@ -193,6 +193,9 @@ class UserTest {
                         ),
                         org.assertj.core.groups.Tuple.tuple(
                                 "ix_users_department_id", "department_id", false
+                        ),
+                        org.assertj.core.groups.Tuple.tuple(
+                                "ix_users_deleted", "deleted", false
                         )
                 );
     }
