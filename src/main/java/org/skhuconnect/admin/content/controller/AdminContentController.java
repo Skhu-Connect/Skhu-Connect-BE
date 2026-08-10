@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "Admin Content", description = "Administrator petition and comment management API")
+@Tag(name = "관리자 콘텐츠", description = "관리자 청원·댓글 관리 API")
 @RestController
 @RequestMapping("/connect/admin/petitions")
 public class AdminContentController {
@@ -31,7 +31,7 @@ public class AdminContentController {
         this.service = service;
     }
 
-    @Operation(summary = "List petitions for administration")
+    @Operation(summary = "관리자용 청원 목록 조회")
     @GetMapping
     public AdminPageResponse<AdminPetitionResponse> findPetitions(
             @RequestParam(defaultValue = "0") int page,
@@ -40,7 +40,7 @@ public class AdminContentController {
         return service.findPetitions(page, size);
     }
 
-    @Operation(summary = "Hide a petition")
+    @Operation(summary = "청원 숨김")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Petition hidden"),
             @ApiResponse(responseCode = "400", description = "Invalid reason", content = @Content),
@@ -55,7 +55,7 @@ public class AdminContentController {
         return service.hidePetition(adminId, petitionId, request);
     }
 
-    @Operation(summary = "Restore a hidden petition")
+    @Operation(summary = "청원 숨김 복구")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Petition restored"),
             @ApiResponse(responseCode = "404", description = "Petition not found", content = @Content)
@@ -65,7 +65,7 @@ public class AdminContentController {
         return service.restorePetition(adminId, petitionId);
     }
 
-    @Operation(summary = "List comments and replies for administration")
+    @Operation(summary = "관리자용 댓글·대댓글 목록 조회")
     @GetMapping("/{petitionId}/comments")
     public AdminPageResponse<AdminCommentResponse> findComments(
             @PathVariable Long petitionId,
@@ -75,7 +75,7 @@ public class AdminContentController {
         return service.findComments(petitionId, page, size);
     }
 
-    @Operation(summary = "Hide a comment or reply")
+    @Operation(summary = "댓글·대댓글 숨김")
     @PatchMapping("/{petitionId}/comments/{commentId}/hide")
     public AdminCommentResponse hideComment(
             @RequestAttribute("adminId") Long adminId,
@@ -86,7 +86,7 @@ public class AdminContentController {
         return service.hideComment(adminId, petitionId, commentId, request);
     }
 
-    @Operation(summary = "Restore a hidden comment or reply")
+    @Operation(summary = "댓글·대댓글 숨김 복구")
     @PatchMapping("/{petitionId}/comments/{commentId}/restore")
     public AdminCommentResponse restoreComment(
             @RequestAttribute("adminId") Long adminId,

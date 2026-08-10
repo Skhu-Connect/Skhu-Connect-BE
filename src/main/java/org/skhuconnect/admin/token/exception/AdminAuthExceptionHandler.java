@@ -17,8 +17,8 @@ public class AdminAuthExceptionHandler {
         };
         ProblemDetail detail = ProblemDetail.forStatus(status);
         detail.setTitle(switch (exception.getReason()) {
-            case INVALID_CREDENTIALS -> "Invalid credentials";
-            case TOKEN_INVALID -> "Invalid refresh token";
+            case INVALID_CREDENTIALS -> "인증 정보가 올바르지 않습니다";
+            case TOKEN_INVALID -> "리프레시 토큰이 올바르지 않습니다";
             case TOKEN_EXPIRED -> "Refresh token expired";
         });
         return detail;
