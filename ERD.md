@@ -1325,3 +1325,27 @@ Codex는 다음 원칙을 따른다.
 공지 상태는 DRAFT, PUBLISHED, HIDDEN을 사용한다. 최초 PUBLISHED 전환에서만 기존 사용자 Notification/FCM으로 전체 알림을 발송하고, 수정·숨김·재공개에서는 재발송하지 않는다. 공개 공지만 사용자에게 노출하며 물리 삭제하지 않는다.
 
 대시보드는 별도 Entity 없이 현재 누적 기준의 사용자 수, 청원 상태별 수, 동의 수, 댓글 수, 미처리 신고 수를 집계한다. 기간별·추가 통계는 후속 범위다.
+
+---
+
+# 23. 회원 탈퇴 스키마
+
+`users`에 다음 컬럼을 추가한다.
+
+| 컬럼 | 타입 | Null | 설명 |
+|---|---|---:|---|
+| `deleted` | `BOOLEAN` | 불가 | 회원 탈퇴 여부, 기본값 `false` |
+| `deleted_at` | `DATETIME(6)` | 가능 | 회원 탈퇴 시각 |
+
+탈퇴 이력은 `user_withdrawal_histories`로 관리한다.
+
+| 컬럼 | 타입 | Null | 제약조건 | 설명 |
+|---|---|---:|---|---|
+| `id` | `BIGINT` | 불가 | PK, AUTO_INCREMENT | 탈퇴 이력 식별자 |
+| `user_id` | `BIGINT` | 불가 | FK, UNIQUE | 탈퇴한 기존 User |
+| `email_hash` | `VARCHAR(64)` | 불가 | INDEX | 정규화된 학교 이메일 SHA-256 해시 |
+| `withdrawn_at` | `DATETIME(6)` | 불가 | INDEX | 탈퇴 시각 |
+| `created_at` | `DATETIME(6)` | 불가 |  | 생성 시각 |
+| `updated_at` | `DATETIME(6)` | 불가 |  | 수정 시각 |
+
+원본 이메일은 탈퇴 이력에 저장하지 않는다. 기존 콘텐츠의 User FK는 탈퇴한 기존 User row를 계속 참조하며 재가입한 새 User로 이전하지 않는다.

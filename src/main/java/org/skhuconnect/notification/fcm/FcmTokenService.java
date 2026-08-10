@@ -12,6 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class FcmTokenService {
     private final FcmTokenRepository tokens; private final UserRepository users;
     public FcmTokenService(FcmTokenRepository tokens, UserRepository users) { this.tokens=tokens; this.users=users; }
-    @Transactional public void register(Long userId, FcmTokenRequest request) { User user=users.getReferenceById(userId); tokens.findByToken(request.token()).ifPresentOrElse(existing -> existing.changeUser(user), () -> tokens.save(FcmToken.create(user, request.token()))); }
+    @Transactional public void register(Long userId, FcmTokenRequest request) { User user=users.findById(userId).filter(candidate -> !candidate.isDeleted()).orElseThrow(() -> new IllegalArgumentException("active user not found")); tokens.findByToken(request.token()).ifPresentOrElse(existing -> existing.changeUser(user), () -> tokens.save(FcmToken.create(user, request.token()))); }
     @Transactional public void delete(Long userId, String token) { tokens.deleteByUserIdAndToken(userId, token); }
 }

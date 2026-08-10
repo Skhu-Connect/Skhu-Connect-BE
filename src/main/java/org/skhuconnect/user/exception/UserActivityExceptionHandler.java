@@ -19,4 +19,16 @@ public class UserActivityExceptionHandler {
         detail.setTitle(exception.getMessage());
         return detail;
     }
+
+    @ExceptionHandler(UserWithdrawalException.class)
+    ProblemDetail handleWithdrawal(UserWithdrawalException exception) {
+        HttpStatus status = switch (exception.getReason()) {
+            case USER_NOT_FOUND -> HttpStatus.NOT_FOUND;
+            case INVALID_PASSWORD -> HttpStatus.UNAUTHORIZED;
+        };
+        ProblemDetail detail = ProblemDetail.forStatus(status);
+        detail.setTitle(exception.getReason() == UserWithdrawalException.Reason.INVALID_PASSWORD
+                ? "Current password does not match" : "User not found");
+        return detail;
+    }
 }

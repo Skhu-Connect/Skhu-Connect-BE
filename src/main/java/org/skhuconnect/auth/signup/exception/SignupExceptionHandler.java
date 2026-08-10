@@ -13,13 +13,14 @@ public class SignupExceptionHandler {
     @ExceptionHandler(SignupException.class)
     public ProblemDetail handleSignup(SignupException exception) {
         HttpStatus status = switch (exception.getReason()) {
-            case LOGIN_ID_ALREADY_EXISTS, EMAIL_ALREADY_EXISTS -> HttpStatus.CONFLICT;
+            case LOGIN_ID_ALREADY_EXISTS, EMAIL_ALREADY_EXISTS, REJOIN_RESTRICTED -> HttpStatus.CONFLICT;
             case DEPARTMENT_NOT_FOUND -> HttpStatus.NOT_FOUND;
         };
         ProblemDetail detail = ProblemDetail.forStatus(status);
         detail.setTitle(switch (exception.getReason()) {
             case LOGIN_ID_ALREADY_EXISTS -> "Login ID already exists";
             case EMAIL_ALREADY_EXISTS -> "Email already exists";
+            case REJOIN_RESTRICTED -> "Re-registration is available 30 days after withdrawal";
             case DEPARTMENT_NOT_FOUND -> "Department not found";
         });
         return detail;
