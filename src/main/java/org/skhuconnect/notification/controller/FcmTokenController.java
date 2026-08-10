@@ -6,7 +6,7 @@ import org.skhuconnect.notification.fcm.FcmTokenService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-@io.swagger.v3.oas.annotations.tags.Tag(name="fcm-token-controller", description="FCM ?좏겙 ?깅줉쨌??젣 API")
+@io.swagger.v3.oas.annotations.tags.Tag(name="fcm-token-controller", description="FCM 토큰 등록·삭제 API")
 @RestController
 @RequestMapping("/connect/notifications/fcm-tokens")
 public class FcmTokenController {
