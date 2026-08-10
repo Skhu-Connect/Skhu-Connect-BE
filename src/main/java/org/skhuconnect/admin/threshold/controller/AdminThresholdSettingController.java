@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@Tag(name = "愿由ъ옄 ?꾧퀎移??ㅼ젙s", description = "관리자 임계치 설정 API")
+@Tag(name = "Admin Threshold Settings", description = "愿由ъ옄 ?꾧퀎移??ㅼ젙 API")
 @RestController
 @RequestMapping("/connect/admin/threshold-settings")
 public class AdminThresholdSettingController {
