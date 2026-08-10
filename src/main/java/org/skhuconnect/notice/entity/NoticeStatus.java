@@ -1,0 +1,1 @@
+package org.skhuconnect.notice.entity; public enum NoticeStatus { DRAFT, PUBLISHED, HIDDEN }

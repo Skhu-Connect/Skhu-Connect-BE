@@ -38,6 +38,13 @@ public class NotificationEventService {
         }
     }
 
+    public void onNoticePublished(Long noticeId, String noticeTitle, Iterable<User> receivers) {
+        String title = "새 공지사항이 등록되었습니다";
+        for (User receiver : receivers) {
+            createNoticeOnce(receiver, title, noticeTitle, "notice:published:" + noticeId + ":" + receiver.getId());
+        }
+    }
+
     public void onPetitionAnswered(Petition petition) {
         notifyPetitionAudience(petition, PETITION_ANSWERED, "petition:answered:");
     }
@@ -68,6 +75,14 @@ public class NotificationEventService {
                         prefix + petition.getId() + ":" + receiver.getId());
             }
         }
+    }
+
+    private void createNoticeOnce(User receiver, String title, String body, String eventKey) {
+        if (!receiver.isNotificationEnabled() || notifications.existsByEventKey(eventKey)) return;
+        try {
+            Notification notification = notifications.saveAndFlush(Notification.createNotice(receiver, title, body, eventKey));
+            try { fcmPushService.send(notification); } catch (RuntimeException ignored) { }
+        } catch (DataIntegrityViolationException ignored) { }
     }
 
     private void createOnce(User receiver, NotificationType type, Petition petition,

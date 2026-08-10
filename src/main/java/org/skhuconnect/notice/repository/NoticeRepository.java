@@ -1,0 +1,1 @@
+package org.skhuconnect.notice.repository; import org.skhuconnect.notice.entity.*; import org.springframework.data.domain.*; import org.springframework.data.jpa.repository.JpaRepository; public interface NoticeRepository extends JpaRepository<Notice,Long>{Page<Notice> findByStatusOrderByCreatedAtDescIdDesc(NoticeStatus s,Pageable p);}

@@ -24,8 +24,8 @@ public class FcmPushService {
         FirebaseMessaging messaging = messaging();
         Message.Builder base = Message.builder()
                 .setNotification(com.google.firebase.messaging.Notification.builder()
-                        .setTitle("성공잇다")
-                        .setBody(NotificationResponse.message(notification.getType()))
+                        .setTitle(notification.getTitle() != null ? notification.getTitle() : "SKHU Connect")
+                        .setBody(notification.getBody() != null ? notification.getBody() : NotificationResponse.message(notification.getType()))
                         .build())
                 .putData("notificationId", String.valueOf(notification.getId()));
         if (notification.getPetition() != null) base.putData("petitionId", String.valueOf(notification.getPetition().getId()));

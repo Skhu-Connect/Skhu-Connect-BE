@@ -7,20 +7,21 @@ import java.time.LocalDateTime;
 public record NotificationResponse(Long id, NotificationType type, String message,
         Long petitionId, Long commentId, boolean read, LocalDateTime createdAt) {
     public static NotificationResponse from(Notification n) {
-        return new NotificationResponse(n.getId(), n.getType(), message(n.getType()),
+        return new NotificationResponse(n.getId(), n.getType(), n.getBody() != null ? n.getBody() : message(n.getType()),
                 n.getPetition() == null ? null : n.getPetition().getId(),
                 n.getComment() == null ? null : n.getComment().getId(),
                 n.isRead(), n.getCreatedAt());
     }
     public static String message(NotificationType type) {
         return switch (type) {
-            case PETITION_AGREEMENT_60_PERCENT -> "청원이 목표 동의 수의 60%에 도달했습니다.";
-            case PETITION_AGREEMENT_100_PERCENT -> "청원이 목표 동의 수를 달성했습니다.";
-            case PETITION_UNDER_REVIEW -> "청원 검토가 시작되었습니다.";
-            case PETITION_ANSWERED -> "청원에 공식 답변이 등록되었습니다.";
-            case COMMENT_REPLY -> "내 댓글에 대댓글이 작성되었습니다.";
-            case COMMENT_LIKE -> "내 댓글에 공감이 등록되었습니다.";
-            case REPLY_LIKE -> "내 대댓글에 공감이 등록되었습니다.";
+            case PETITION_AGREEMENT_60_PERCENT -> "嶺????嶺뚮ㅄ維싷쭗????됰꺄 ??瑜곷꺄 60%???熬곣뫀堉???곕????덈펲.";
+            case PETITION_AGREEMENT_100_PERCENT -> "嶺????嶺뚮ㅄ維싷쭗????됰꺄 ??? ??????곕????덈펲.";
+            case PETITION_UNDER_REVIEW -> "嶺????롪틵???? ??戮곗굚??琉????鍮??";
+            case PETITION_ANSWERED -> "嶺??????ㅻ쾴????????繹먮굞夷??琉????鍮??";
+            case COMMENT_REPLY -> "???癰??????癰?????얜????琉????鍮??";
+            case COMMENT_LIKE -> "???癰?????ㅻ?????繹먮굞夷??琉????鍮??";
+            case REPLY_LIKE -> "???蹂????⑤벀而???源낆쨯??뤿???щ빍??";
+            case NOTICE -> "새 공지사항이 등록되었습니다";
         };
     }
 }

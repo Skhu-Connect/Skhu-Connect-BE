@@ -7,5 +7,6 @@ public enum NotificationType {
     PETITION_ANSWERED,
     COMMENT_REPLY,
     COMMENT_LIKE,
-    REPLY_LIKE
+    REPLY_LIKE,
+    NOTICE
 }
