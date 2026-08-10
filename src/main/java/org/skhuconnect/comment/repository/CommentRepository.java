@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface CommentRepository extends JpaRepository<Comment, Long> {
+    long countByDeletedFalse();
     @EntityGraph(attributePaths = {"anonymousNumber", "writer"})
     Page<Comment> findByPetitionIdAndDeletedFalse(Long petitionId, Pageable pageable);
 

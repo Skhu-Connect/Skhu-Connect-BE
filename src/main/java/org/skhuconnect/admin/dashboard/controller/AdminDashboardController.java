@@ -1,0 +1,3 @@
+package org.skhuconnect.admin.dashboard.controller;
+import io.swagger.v3.oas.annotations.Operation; import io.swagger.v3.oas.annotations.tags.Tag; import org.skhuconnect.admin.dashboard.dto.AdminDashboardResponse; import org.skhuconnect.admin.dashboard.service.AdminDashboardService; import org.springframework.web.bind.annotation.*;
+@Tag(name="Admin Dashboard",description="관리자 대시보드 통계 API") @RestController @RequestMapping("/connect/admin/dashboard") public class AdminDashboardController { private final AdminDashboardService service; public AdminDashboardController(AdminDashboardService service){this.service=service;} @Operation(summary="관리자 대시보드 통계 조회") @GetMapping public AdminDashboardResponse get(){return service.get();} }

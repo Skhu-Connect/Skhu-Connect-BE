@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 public interface ReportRepository extends JpaRepository<Report,Long>{
+ long countByStatus(ReportStatus status);
  boolean existsByReporterIdAndPetitionId(Long reporterId,Long petitionId);
  boolean existsByReporterIdAndCommentId(Long reporterId,Long commentId);
  @EntityGraph(attributePaths={"reporter","petition","comment","processedByAdmin"})

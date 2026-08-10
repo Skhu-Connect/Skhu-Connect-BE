@@ -16,6 +16,9 @@ import java.util.Optional;
 public interface PetitionRepository extends JpaRepository<Petition, Long>,
         JpaSpecificationExecutor<Petition> {
 
+    long countByDeletedFalse();
+    long countByStatusAndDeletedFalse(org.skhuconnect.petition.entity.PetitionStatus status);
+
     Optional<Petition> findByIdAndDeletedFalse(Long id);
 
     @EntityGraph(attributePaths = "writer")
