@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "관리자 공식 답변", description = "관리자 공식 답변 API")
+@Tag(name = "愿由ъ옄 怨듭떇 ?듬?", description = "愿由ъ옄 怨듭떇 ?듬? API")
 @RestController
 @RequestMapping("/connect/admin/petitions/{petitionId}/answer")
 public class AdminOfficialAnswerController {
@@ -29,7 +29,7 @@ public class AdminOfficialAnswerController {
         this.service = service;
     }
 
-    @Operation(summary = "Register an official answer for an under-review petition")
+    @Operation(summary = "검토 중 청원 공식 답변 등록")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Official answer registered"),
             @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content),
@@ -45,7 +45,7 @@ public class AdminOfficialAnswerController {
         return service.register(adminId, petitionId, request);
     }
 
-    @Operation(summary = "Update an official answer")
+    @Operation(summary = "공식 답변 수정")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Official answer updated"),
             @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content),
@@ -61,7 +61,7 @@ public class AdminOfficialAnswerController {
         return service.update(adminId, petitionId, request);
     }
 
-    @Operation(summary = "Get an official answer")
+    @Operation(summary = "공식 답변 조회")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Official answer retrieved"),
             @ApiResponse(responseCode = "404", description = "Administrator, petition, or official answer not found", content = @Content)

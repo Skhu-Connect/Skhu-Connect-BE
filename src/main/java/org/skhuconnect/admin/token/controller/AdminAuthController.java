@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "Admin Authentication", description = "Administrator authentication API")
+@Tag(name = "Admin Authentication", description = "관리자 인증 API")
 @RestController
 @RequestMapping("/connect/admin/auth")
 public class AdminAuthController {
@@ -33,7 +33,7 @@ public class AdminAuthController {
         this.cookieService = cookieService;
     }
 
-    @Operation(summary = "Administrator login")
+    @Operation(summary = "관리자 로그인")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Login successful"),
             @ApiResponse(responseCode = "401", description = "Invalid credentials", content = @Content)
@@ -43,7 +43,7 @@ public class AdminAuthController {
         return tokenResponse(adminAuthService.login(request.loginId(), request.password()));
     }
 
-    @Operation(summary = "Administrator access token refresh")
+    @Operation(summary = "관리자 액세스 토큰 재발급")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Refresh successful"),
             @ApiResponse(responseCode = "401", description = "Invalid refresh token", content = @Content),
@@ -56,7 +56,7 @@ public class AdminAuthController {
         return tokenResponse(adminAuthService.refresh(refreshToken));
     }
 
-    @Operation(summary = "Administrator logout")
+    @Operation(summary = "관리자 로그아웃")
     @ApiResponse(responseCode = "204", description = "Logout successful")
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(
