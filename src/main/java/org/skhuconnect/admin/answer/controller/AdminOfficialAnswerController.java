@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "愿由ъ옄 怨듭떇 ?듬?", description = "愿由ъ옄 怨듭떇 ?듬? API")
+@Tag(name = "관리자 공식 답변", description = "관리자 공식 답변 API")
 @RestController
 @RequestMapping("/connect/admin/petitions/{petitionId}/answer")
 public class AdminOfficialAnswerController {

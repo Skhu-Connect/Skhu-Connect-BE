@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "愿由ъ옄 ?몄쬆", description = "愿由ъ옄 ?몄쬆 API")
+@Tag(name = "관리자 인증", description = "관리자 인증 API")
 @RestController
 @RequestMapping("/connect/admin/auth")
 public class AdminAuthController {
@@ -33,21 +33,21 @@ public class AdminAuthController {
         this.cookieService = cookieService;
     }
 
-    @Operation(summary = "愿由ъ옄 濡쒓렇??)
+    @Operation(summary = "관리자 로그인")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "濡쒓렇???깃났"),
-            @ApiResponse(responseCode = "401", description = "?몄쬆 ?뺣낫媛 ?щ컮瑜댁? ?딆뒿?덈떎", content = @Content)
+            @ApiResponse(responseCode = "200", description = "로그인 성공"),
+            @ApiResponse(responseCode = "401", description = "인증 정보가 올바르지 않습니다", content = @Content)
     })
     @PostMapping("/login")
     public ResponseEntity<AccessTokenResponse> login(@Valid @RequestBody LoginRequest request) {
         return tokenResponse(adminAuthService.login(request.loginId(), request.password()));
     }
 
-    @Operation(summary = "愿由ъ옄 ?≪꽭???좏겙 ?щ컻湲?)
+    @Operation(summary = "관리자 액세스 토큰 재발급")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "?좏겙 ?щ컻湲??깃났"),
-            @ApiResponse(responseCode = "401", description = "由ы봽?덉떆 ?좏겙???щ컮瑜댁? ?딆뒿?덈떎", content = @Content),
-            @ApiResponse(responseCode = "410", description = "由ы봽?덉떆 ?좏겙??留뚮즺?섏뿀?듬땲??, content = @Content)
+            @ApiResponse(responseCode = "200", description = "토큰 재발급 성공"),
+            @ApiResponse(responseCode = "401", description = "리프레시 토큰이 올바르지 않습니다", content = @Content),
+            @ApiResponse(responseCode = "410", description = "리프레시 토큰이 만료되었습니다", content = @Content)
     })
     @PostMapping("/token/refresh")
     public ResponseEntity<AccessTokenResponse> refresh(
@@ -56,8 +56,8 @@ public class AdminAuthController {
         return tokenResponse(adminAuthService.refresh(refreshToken));
     }
 
-    @Operation(summary = "愿由ъ옄 濡쒓렇?꾩썐")
-    @ApiResponse(responseCode = "204", description = "濡쒓렇?꾩썐 ?깃났")
+    @Operation(summary = "관리자 로그아웃")
+    @ApiResponse(responseCode = "204", description = "로그아웃 성공")
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(
             @CookieValue(name = AdminRefreshTokenCookieService.COOKIE_NAME,
