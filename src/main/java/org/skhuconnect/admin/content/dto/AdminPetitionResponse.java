@@ -8,6 +8,8 @@ import java.time.LocalDateTime;
 
 public record AdminPetitionResponse(
         Long id,
+        Long writerId,
+        boolean writerDeleted,
         PetitionCategory category,
         PetitionStatus status,
         String title,
@@ -22,7 +24,8 @@ public record AdminPetitionResponse(
         LocalDateTime updatedAt
 ) {
     public static AdminPetitionResponse from(Petition petition) {
-        return new AdminPetitionResponse(petition.getId(), petition.getCategory(),
+        return new AdminPetitionResponse(petition.getId(),
+                petition.getWriter().getId(), petition.getWriter().isDeleted(), petition.getCategory(),
                 petition.getStatus(), petition.getTitle(), petition.getContent(),
                 petition.getAgreementCount(), petition.getTargetAgreementCount(),
                 petition.isHidden(), petition.getHiddenReason(),

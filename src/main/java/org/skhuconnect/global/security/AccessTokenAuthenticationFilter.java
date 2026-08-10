@@ -11,6 +11,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.stereotype.Component;
+import org.skhuconnect.user.repository.UserRepository;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -31,9 +32,12 @@ public class AccessTokenAuthenticationFilter extends OncePerRequestFilter {
     private static final String ADMIN_AUTH_PATH = "/connect/admin/auth";
 
     private final JwtDecoder jwtDecoder;
+    private final UserRepository userRepository;
 
-    public AccessTokenAuthenticationFilter(JwtDecoder jwtDecoder) {
+    public AccessTokenAuthenticationFilter(
+            JwtDecoder jwtDecoder, UserRepository userRepository) {
         this.jwtDecoder = jwtDecoder;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -95,6 +99,10 @@ public class AccessTokenAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
             request.setAttribute(adminRequest ? ADMIN_ID_ATTRIBUTE : USER_ID_ATTRIBUTE, subjectId);
+            if (!adminRequest && !userRepository.existsByIdAndDeletedFalse(subjectId)) {
+                unauthorized(response);
+                return;
+            }
             filterChain.doFilter(request, response);
         } catch (JwtException | IllegalArgumentException exception) {
             unauthorized(response);

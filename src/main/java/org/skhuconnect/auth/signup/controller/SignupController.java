@@ -30,7 +30,7 @@ public class SignupController {
             @ApiResponse(responseCode = "201", description = "회원가입 성공"),
             @ApiResponse(responseCode = "400", description = "요청 또는 인증 token 오류", content = @Content),
             @ApiResponse(responseCode = "404", description = "학과 없음", content = @Content),
-            @ApiResponse(responseCode = "409", description = "중복 계정 또는 사용된 token", content = @Content),
+            @ApiResponse(responseCode = "409", description = "중복 계정, 사용된 token 또는 탈퇴 후 30일 이내 재가입", content = @Content),
             @ApiResponse(responseCode = "410", description = "인증 token 만료", content = @Content)
     })
     @PostMapping("/signup")

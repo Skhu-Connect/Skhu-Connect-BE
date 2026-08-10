@@ -79,13 +79,13 @@ class AdminContentControllerTest {
     }
 
     private AdminPetitionResponse petition() {
-        return new AdminPetitionResponse(10L, PetitionCategory.FACILITY, PetitionStatus.OPEN,
+        return new AdminPetitionResponse(10L, 99L, false, PetitionCategory.FACILITY, PetitionStatus.OPEN,
                 "title", "content", 0, 10, true, "policy violation", 7L,
                 LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now());
     }
 
     private AdminCommentResponse comment() {
-        return new AdminCommentResponse(20L, 11L, "reply", 1, true,
+        return new AdminCommentResponse(20L, 11L, 99L, false, "reply", 1, true,
                 "policy violation", 7L, LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now());
     }
 }

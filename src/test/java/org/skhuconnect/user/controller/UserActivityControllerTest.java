@@ -30,7 +30,8 @@ class UserActivityControllerTest {
     @BeforeEach
     void setUp() {
         service = mock(UserActivityService.class);
-        mockMvc = standaloneSetup(new UserActivityController(service))
+        mockMvc = standaloneSetup(new UserActivityController(service,
+                        mock(org.skhuconnect.user.service.UserWithdrawalService.class)))
                 .setControllerAdvice(new UserActivityExceptionHandler())
                 .build();
     }

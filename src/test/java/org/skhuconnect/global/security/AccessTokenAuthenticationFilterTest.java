@@ -21,6 +21,7 @@ import static org.mockito.Mockito.when;
 
 class AccessTokenAuthenticationFilterTest {
 
+    private org.skhuconnect.user.repository.UserRepository users;
     private JwtDecoder jwtDecoder;
     private AccessTokenAuthenticationFilter filter;
     private FilterChain filterChain;
@@ -28,7 +29,9 @@ class AccessTokenAuthenticationFilterTest {
     @BeforeEach
     void setUp() {
         jwtDecoder = mock(JwtDecoder.class);
-        filter = new AccessTokenAuthenticationFilter(jwtDecoder);
+        users = mock(org.skhuconnect.user.repository.UserRepository.class);
+        when(users.existsByIdAndDeletedFalse(org.mockito.ArgumentMatchers.anyLong())).thenReturn(true);
+        filter = new AccessTokenAuthenticationFilter(jwtDecoder, users);
         filterChain = mock(FilterChain.class);
     }
 
@@ -281,6 +284,20 @@ class AccessTokenAuthenticationFilterTest {
         assertThat(response.getStatus()).isEqualTo(401);
         verify(filterChain, never()).doFilter(request, response);
     }
+    @Test
+    void withdrawnUserAccessTokenIsRejectedImmediately() throws Exception {
+        MockHttpServletRequest request = petitionRequest();
+        request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer withdrawn-token");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        when(jwtDecoder.decode("withdrawn-token")).thenReturn(userJwt("42", "USER"));
+        when(users.existsByIdAndDeletedFalse(42L)).thenReturn(false);
+
+        filter.doFilter(request, response, filterChain);
+
+        assertThat(response.getStatus()).isEqualTo(401);
+        verify(filterChain, never()).doFilter(request, response);
+    }
+
     private MockHttpServletRequest petitionRequest() {
         return new MockHttpServletRequest("POST", "/connect/petitions");
     }

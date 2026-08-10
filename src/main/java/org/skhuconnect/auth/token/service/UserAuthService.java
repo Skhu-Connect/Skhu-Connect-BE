@@ -46,6 +46,9 @@ public class UserAuthService {
     public TokenIssueResult login(String loginId, String password) {
         User user = userRepository.findByLoginIdForUpdate(loginId)
                 .orElseThrow(() -> error(Reason.INVALID_CREDENTIALS));
+        if (user.isDeleted()) {
+            throw error(Reason.INVALID_CREDENTIALS);
+        }
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw error(Reason.INVALID_CREDENTIALS);
         }
@@ -69,6 +72,9 @@ public class UserAuthService {
         RefreshToken refreshToken = refreshTokenRepository
                 .findByTokenHash(opaqueTokenService.hash(rawRefreshToken))
                 .orElseThrow(() -> error(Reason.TOKEN_INVALID));
+        if (refreshToken.getUser().isDeleted()) {
+            throw error(Reason.TOKEN_INVALID);
+        }
         LocalDateTime now = LocalDateTime.now(clock);
         if (refreshToken.isExpiredAt(now)) {
             throw error(Reason.TOKEN_EXPIRED);

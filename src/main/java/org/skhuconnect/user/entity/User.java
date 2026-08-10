@@ -14,6 +14,7 @@ import org.hibernate.annotations.ColumnDefault;
 import org.skhuconnect.department.entity.Department;
 import org.skhuconnect.global.entity.BaseEntity;
 
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 @Entity
@@ -22,7 +23,8 @@ import java.util.Objects;
         indexes = {
                 @Index(name = "ux_users_email", columnList = "email", unique = true),
                 @Index(name = "ux_users_login_id", columnList = "login_id", unique = true),
-                @Index(name = "ix_users_department_id", columnList = "department_id")
+                @Index(name = "ix_users_department_id", columnList = "department_id"),
+                @Index(name = "ix_users_deleted", columnList = "deleted")
         }
 )
 public class User extends BaseEntity {
@@ -50,6 +52,13 @@ public class User extends BaseEntity {
     @ColumnDefault("true")
     private boolean notificationEnabled;
 
+    @Column(name = "deleted", nullable = false)
+    @ColumnDefault("false")
+    private boolean deleted;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     protected User() {
     }
 
@@ -68,6 +77,7 @@ public class User extends BaseEntity {
         );
         this.department = Objects.requireNonNull(department, "department must not be null");
         this.notificationEnabled = true;
+        this.deleted = false;
     }
 
     public static User create(
@@ -94,6 +104,21 @@ public class User extends BaseEntity {
         this.notificationEnabled = enabled;
     }
 
+    public void withdraw(LocalDateTime withdrawnAt) {
+        if (deleted) {
+            throw new IllegalStateException("user is already withdrawn");
+        }
+        if (id == null) {
+            throw new IllegalStateException("persisted user is required");
+        }
+        this.email = "withdrawn-" + id + "@deleted.invalid";
+        this.loginId = "withdrawn-" + id;
+        this.password = "WITHDRAWN:" + id;
+        this.notificationEnabled = false;
+        this.deleted = true;
+        this.deletedAt = Objects.requireNonNull(withdrawnAt, "withdrawnAt must not be null");
+    }
+
     public Long getId() {
         return id;
     }
@@ -116,6 +141,14 @@ public class User extends BaseEntity {
 
     public boolean isNotificationEnabled() {
         return notificationEnabled;
+    }
+
+    public boolean isDeleted() {
+        return deleted;
+    }
+
+    public LocalDateTime getDeletedAt() {
+        return deletedAt;
     }
 
     private static void validateSchoolEmail(String email) {
