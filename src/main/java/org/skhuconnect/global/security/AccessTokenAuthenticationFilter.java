@@ -26,6 +26,7 @@ public class AccessTokenAuthenticationFilter extends OncePerRequestFilter {
     private static final String PETITION_PATH = "/connect/petitions";
     private static final String NOTIFICATION_PATH = "/connect/notifications";
     private static final String USER_PATH = "/connect/users";
+    private static final String REPORT_PATH = "/connect/reports";
     private static final String ADMIN_PATH = "/connect/admin";
     private static final String ADMIN_AUTH_PATH = "/connect/admin/auth";
 
@@ -50,7 +51,8 @@ public class AccessTokenAuthenticationFilter extends OncePerRequestFilter {
                 || path.startsWith(NOTIFICATION_PATH + "/");
         boolean userPath = path.equals(USER_PATH)
                 || path.startsWith(USER_PATH + "/");
-        if (!petitionPath && !notificationPath && !userPath) {
+        boolean reportPath = path.equals(REPORT_PATH);
+        if (!petitionPath && !notificationPath && !userPath && !reportPath) {
             return true;
         }
         if (notificationPath || userPath) {
