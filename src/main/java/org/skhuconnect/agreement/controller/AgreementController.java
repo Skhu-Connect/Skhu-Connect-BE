@@ -30,6 +30,7 @@ public class AgreementController {
     @Operation(summary = "청원 동의")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "청원 동의 성공"),
+            @ApiResponse(responseCode = "401", description = "로그인 필요", content = @Content),
             @ApiResponse(responseCode = "404", description = "사용자 또는 청원 없음",
                     content = @Content),
             @ApiResponse(responseCode = "409", description = "동의 불가 또는 중복 동의",
@@ -47,6 +48,7 @@ public class AgreementController {
     @Operation(summary = "청원 동의 취소")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "청원 동의 취소 성공"),
+            @ApiResponse(responseCode = "401", description = "로그인 필요", content = @Content),
             @ApiResponse(responseCode = "404", description = "청원 또는 동의 없음",
                     content = @Content),
             @ApiResponse(responseCode = "409", description = "동의 취소 불가",

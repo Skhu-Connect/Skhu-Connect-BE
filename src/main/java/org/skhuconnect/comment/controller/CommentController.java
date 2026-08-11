@@ -43,7 +43,7 @@ public class CommentController {
         this.commentLikeService = commentLikeService;
     }
 
-    @Operation(summary = "댓글 작성")
+    @Operation(summary = "댓글 또는 답글 작성", description = "로그인이 필요합니다. parentCommentId가 없으면 댓글, 있으면 해당 댓글의 답글을 작성합니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "댓글 작성 성공"),
             @ApiResponse(responseCode = "400", description = "요청 형식 오류", content = @Content),
@@ -61,10 +61,14 @@ public class CommentController {
                 .body(commentService.create(userId, petitionId, request));
     }
 
-    @Operation(summary = "댓글 목록 조회")
+    @Operation(
+            summary = "댓글과 답글 목록 조회",
+            description = "공유받은 사용자도 로그인 없이 조회할 수 있습니다. 답글은 각 댓글의 replies에 포함됩니다. "
+                    + "비로그인 응답의 myComment와 liked는 false입니다. 청원이 없거나 삭제·숨김 상태이면 404를 반환합니다."
+    )
     @SecurityRequirements
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "댓글 목록 조회 성공"),
+            @ApiResponse(responseCode = "200", description = "익명 번호, 내용, 공감 수, 작성자 여부, 공감 여부와 답글 목록 조회 성공"),
             @ApiResponse(responseCode = "400", description = "잘못된 페이지 요청", content = @Content),
             @ApiResponse(responseCode = "401", description = "유효하지 않은 선택적 토큰", content = @Content),
             @ApiResponse(responseCode = "404", description = "청원 없음", content = @Content)
@@ -80,7 +84,15 @@ public class CommentController {
         return commentService.findAll(userId, petitionId, page, size);
     }
 
-    @Operation(summary = "댓글 수정")
+    @Operation(summary = "댓글 또는 답글 수정", description = "로그인한 작성자만 수정할 수 있습니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "수정 성공"),
+            @ApiResponse(responseCode = "400", description = "요청 형식 오류", content = @Content),
+            @ApiResponse(responseCode = "401", description = "로그인 필요", content = @Content),
+            @ApiResponse(responseCode = "403", description = "작성자가 아님", content = @Content),
+            @ApiResponse(responseCode = "404", description = "청원 또는 댓글 없음", content = @Content),
+            @ApiResponse(responseCode = "409", description = "수정할 수 없는 댓글", content = @Content)
+    })
     @PutMapping("/{commentId}")
     public CommentResponse update(
             @Parameter(hidden = true) @RequestAttribute("userId") Long userId,
@@ -91,7 +103,13 @@ public class CommentController {
         return commentService.update(userId, petitionId, commentId, request);
     }
 
-    @Operation(summary = "댓글 삭제")
+    @Operation(summary = "댓글 또는 답글 삭제", description = "로그인한 작성자만 삭제할 수 있습니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "삭제 성공"),
+            @ApiResponse(responseCode = "401", description = "로그인 필요", content = @Content),
+            @ApiResponse(responseCode = "403", description = "작성자가 아님", content = @Content),
+            @ApiResponse(responseCode = "404", description = "청원 또는 댓글 없음", content = @Content)
+    })
     @DeleteMapping("/{commentId}")
     public ResponseEntity<Void> delete(
             @Parameter(hidden = true) @RequestAttribute("userId") Long userId,
@@ -102,7 +120,13 @@ public class CommentController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "댓글 공감")
+    @Operation(summary = "댓글 또는 답글 공감", description = "로그인이 필요하며 자동 공감은 수행하지 않습니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "공감 성공"),
+            @ApiResponse(responseCode = "401", description = "로그인 필요", content = @Content),
+            @ApiResponse(responseCode = "404", description = "사용자, 청원 또는 댓글 없음", content = @Content),
+            @ApiResponse(responseCode = "409", description = "공감 불가 또는 중복 공감", content = @Content)
+    })
     @PostMapping("/{commentId}/likes")
     public ResponseEntity<CommentLikeResponse> like(
             @Parameter(hidden = true) @RequestAttribute("userId") Long userId,
@@ -113,7 +137,13 @@ public class CommentController {
                 .body(commentLikeService.like(userId, petitionId, commentId));
     }
 
-    @Operation(summary = "댓글 공감 취소")
+    @Operation(summary = "댓글 또는 답글 공감 취소", description = "로그인이 필요합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "공감 취소 성공"),
+            @ApiResponse(responseCode = "401", description = "로그인 필요", content = @Content),
+            @ApiResponse(responseCode = "404", description = "사용자, 청원, 댓글 또는 기존 공감 없음", content = @Content),
+            @ApiResponse(responseCode = "409", description = "공감 취소 불가", content = @Content)
+    })
     @DeleteMapping("/{commentId}/likes")
     public CommentLikeResponse cancelLike(
             @Parameter(hidden = true) @RequestAttribute("userId") Long userId,
