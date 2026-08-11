@@ -88,6 +88,16 @@ class CommentServiceTest {
     }
 
     @Test
+    void anonymousListRejectsMissingDeletedOrHiddenPetition() {
+        when(petitionRepository.findByIdAndDeletedFalseAndHiddenFalse(10L))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.findAll(null, 10L, 0, 20))
+                .isInstanceOf(CommentException.class)
+                .extracting("reason")
+                .isEqualTo(CommentException.Reason.PETITION_NOT_FOUND);
+    }
+    @Test
     void hiddenCommentReturnsNoticeInsteadOfOriginal() {
         Comment comment = comment(1L, 10L, true);
         when(petitionRepository.findByIdAndDeletedFalseAndHiddenFalse(10L))
