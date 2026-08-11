@@ -197,6 +197,40 @@ class AccessTokenAuthenticationFilterTest {
     }
 
     @Test
+    void commentAndReplyListGetDoesNotRequireToken() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "GET", "/connect/petitions/10/comments");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        verify(filterChain).doFilter(request, response);
+        verify(jwtDecoder, never()).decode(
+                org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test
+    void commentAndReplyStateChangesRequireToken() throws Exception {
+        String[][] requests = {
+                {"POST", "/connect/petitions/10/comments"},
+                {"PUT", "/connect/petitions/10/comments/5"},
+                {"DELETE", "/connect/petitions/10/comments/5"},
+                {"POST", "/connect/petitions/10/comments/5/likes"},
+                {"DELETE", "/connect/petitions/10/comments/5/likes"}
+        };
+
+        for (String[] requestSpec : requests) {
+            MockHttpServletRequest request = new MockHttpServletRequest(
+                    requestSpec[0], requestSpec[1]);
+            MockHttpServletResponse response = new MockHttpServletResponse();
+
+            filter.doFilter(request, response, filterChain);
+
+            assertThat(response.getStatus()).isEqualTo(401);
+            verify(filterChain, never()).doFilter(request, response);
+        }
+    }
+    @Test
     void arbitraryPetitionSubPathIsNotPublic() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest(
                 "GET", "/connect/petitions/10/unknown");

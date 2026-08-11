@@ -83,10 +83,15 @@ public class PetitionController {
     }
 
     @SecurityRequirements
-    @Operation(summary = "청원 상세 조회")
+    @Operation(
+            summary = "청원 상세 조회",
+            description = "공유받은 사용자도 로그인 없이 청원 본문을 조회할 수 있습니다. "
+                    + "사용자 삭제, 관리자 숨김 또는 존재하지 않는 청원은 404를 반환합니다. "
+                    + "동의와 댓글 작성 등 상태 변경은 별도 인증 API를 사용합니다."
+    )
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "청원 상세 조회 성공"),
-            @ApiResponse(responseCode = "404", description = "청원 없음", content = @Content)
+            @ApiResponse(responseCode = "200", description = "청원 본문, 상태, 동의 수, 마감 시각 및 공식 답변 조회 성공"),
+            @ApiResponse(responseCode = "404", description = "청원이 없거나 사용자 삭제 또는 관리자 숨김 상태", content = @Content)
     })
     @GetMapping("/{petitionId}")
     public PetitionQueryResponse findDetail(@PathVariable Long petitionId) {
