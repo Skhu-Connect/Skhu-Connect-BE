@@ -113,7 +113,10 @@ org.skhuconnect
 
 - 알림 수신 설정 변경 API(`notification_enabled` 저장과 생성 차단 정책은 구현됨)
 - 브라우저 Push 알림
-- 배포 환경 확정
+
+## 배포
+
+- Railway가 `main` 브랜치 푸시를 감지해 자동 배포한다.
 
 ## 문서
 

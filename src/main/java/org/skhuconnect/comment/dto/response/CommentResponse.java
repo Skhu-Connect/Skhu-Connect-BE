@@ -23,8 +23,8 @@ public record CommentResponse(
                 createdAt, updatedAt, List.of());
     }
 
-    private static final String HIDDEN_CONTENT = "\uAD00\uB9AC\uC790\uC5D0 \uC758\uD574 \uC228\uAE40 \uCC98\uB9AC\uB41C \uB313\uAE00\uC785\uB2C8\uB2E4.";
-    private static final String DELETED_CONTENT = "\uC0AD\uC81C\uB41C \uB313\uAE00\uC785\uB2C8\uB2E4.";
+    private static final String HIDDEN_CONTENT = "관리자에 의해 숨김 처리된 댓글입니다.";
+    private static final String DELETED_CONTENT = "삭제된 댓글입니다.";
 
     public static CommentResponse from(Comment comment, long likeCount, Long userId, boolean liked) {
         return from(comment, likeCount, userId, liked, List.of());

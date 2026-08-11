@@ -389,19 +389,15 @@ POST /connect/auth/logout
 - Path=/connect/auth
 - Secure는 환경변수(JWT_COOKIE_SECURE)로 제어한다.
 
-## 17. 현재 미구현 범위
+## 17. 추가 구현 완료 범위
 
-다음 기능은 아직 구현되지 않았다.
+다음 백엔드 기능은 구현되어 있다.
 
-- 관리자 로그인
-- 관리자 인증 및 권한 관리
-- 공식 답변(OfficialAnswer) 등록 API
-- 공식 답변 등록 시 Notification 연결
-- 관리자 웹
-- 사용자 정보·활동 내역 조회
-- 사용자 웹 통합 테스트
-- 최종 문서 정리
+- 관리자 로그인, Access Token 발급, Refresh Token 회전·폐기와 로그아웃
+- 관리자 `role=ADMIN` 검증과 `adminId` Request Attribute 주입
+- 공식 답변 등록·수정·조회 API
+- 공식 답변 등록 시 `PETITION_ANSWERED` Notification 연결
+- 관리자 임계치·콘텐츠·운영 로그·대시보드 API
+- 로그인 사용자의 본인 정보와 작성 청원·동의·북마크·댓글·알림 조회
 
-Spring Security 전체 FilterChain은 아직 구성하지 않았지만,
-
-AccessTokenAuthenticationFilter를 통해 일반 사용자 인증은 정상 동작한다.
+Spring Security 전체 FilterChain 대신 현재 프로젝트의 `AccessTokenAuthenticationFilter`와 관리자 인증 필터가 일반 사용자·관리자 API 인증을 처리한다.
