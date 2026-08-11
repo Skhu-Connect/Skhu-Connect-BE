@@ -16,6 +16,7 @@ public class PetitionExceptionHandler {
                     HttpStatus.NOT_FOUND;
             case PETITION_FORBIDDEN -> HttpStatus.FORBIDDEN;
             case PETITION_NOT_EDITABLE -> HttpStatus.CONFLICT;
+            case PETITION_CREATE_COOLDOWN -> HttpStatus.TOO_MANY_REQUESTS;
             case INVALID_SORT, INVALID_PAGE -> HttpStatus.BAD_REQUEST;
         };
         ProblemDetail detail = ProblemDetail.forStatus(status);
@@ -25,6 +26,7 @@ public class PetitionExceptionHandler {
             case PETITION_NOT_FOUND -> "Petition not found";
             case PETITION_FORBIDDEN -> "Petition access forbidden";
             case PETITION_NOT_EDITABLE -> "Petition is not editable";
+            case PETITION_CREATE_COOLDOWN -> "Petition creation cooldown is active";
             case INVALID_SORT -> "Invalid petition sort property";
             case INVALID_PAGE -> "Invalid petition page request";
         });

@@ -68,7 +68,7 @@ class PetitionServiceTest {
         User writer = mockUser(1L);
         ThresholdSetting setting = ThresholdSetting.create(
                 PetitionCategory.FACILITY, 1234, new BigDecimal("0.0100"), 5);
-        when(userRepository.findById(1L)).thenReturn(Optional.of(writer));
+        when(userRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(writer));
         when(thresholdSettingRepository.findByCategory(PetitionCategory.FACILITY))
                 .thenReturn(Optional.of(setting));
         when(petitionRepository.save(org.mockito.ArgumentMatchers.any()))
@@ -88,8 +88,46 @@ class PetitionServiceTest {
     }
 
     @Test
+    void createRejectsUntilImmediatelyBeforeCooldownBoundary() {
+        User writer = mockUser(1L);
+        LocalDateTime now = LocalDateTime.of(2026, 8, 5, 12, 0);
+        when(userRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(writer));
+        when(petitionRepository.findLatestCreatedAtByWriterId(1L))
+                .thenReturn(Optional.of(now.minusMinutes(10).plusNanos(1)));
+
+        assertThatThrownBy(() -> service.create(1L, createRequest()))
+                .isInstanceOf(PetitionException.class)
+                .extracting("reason")
+                .isEqualTo(PetitionException.Reason.PETITION_CREATE_COOLDOWN);
+        org.mockito.Mockito.verify(petitionRepository, org.mockito.Mockito.never())
+                .save(any());
+        org.mockito.Mockito.verify(thresholdSettingRepository, org.mockito.Mockito.never())
+                .findByCategory(any());
+    }
+
+    @Test
+    void createAllowsAtExactCooldownBoundary() {
+        User writer = mockUser(1L);
+        ThresholdSetting setting = ThresholdSetting.create(
+                PetitionCategory.FACILITY, 1234, new BigDecimal("0.0100"), 5);
+        LocalDateTime now = LocalDateTime.of(2026, 8, 5, 12, 0);
+        when(userRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(writer));
+        when(petitionRepository.findLatestCreatedAtByWriterId(1L))
+                .thenReturn(Optional.of(now.minusMinutes(10)));
+        when(thresholdSettingRepository.findByCategory(PetitionCategory.FACILITY))
+                .thenReturn(Optional.of(setting));
+        when(petitionRepository.save(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        PetitionResponse response = service.create(1L, createRequest());
+
+        assertThat(response.title()).isEqualTo("시설 개선");
+        verify(petitionRepository).save(any());
+    }
+
+    @Test
     void createRejectsUnknownUser() {
-        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+        when(userRepository.findByIdForUpdate(1L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.create(1L, createRequest()))
                 .isInstanceOf(PetitionException.class)
@@ -100,7 +138,7 @@ class PetitionServiceTest {
     @Test
     void createRejectsMissingThresholdSetting() {
         User writer = mockUser(1L);
-        when(userRepository.findById(1L)).thenReturn(Optional.of(writer));
+        when(userRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(writer));
         when(thresholdSettingRepository.findByCategory(PetitionCategory.FACILITY))
                 .thenReturn(Optional.empty());
 

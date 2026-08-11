@@ -45,11 +45,13 @@ public class PetitionController {
         this.petitionService = petitionService;
     }
 
-    @Operation(summary = "청원 등록")
+    @Operation(summary = "청원 등록", description = "청원 등록 성공 시점부터 10분 후 다시 등록할 수 있습니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "청원 등록 성공"),
             @ApiResponse(responseCode = "400", description = "요청 형식 오류", content = @Content),
             @ApiResponse(responseCode = "404", description = "사용자 또는 임계치 설정 없음",
+                    content = @Content),
+            @ApiResponse(responseCode = "429", description = "청원 등록 후 10분이 지나지 않음",
                     content = @Content)
     })
     @PostMapping

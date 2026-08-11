@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.Map;
@@ -32,6 +33,7 @@ import java.util.Map;
 public class PetitionService {
 
     private static final int MAX_PAGE_SIZE = 100;
+    private static final Duration CREATE_COOLDOWN = Duration.ofMinutes(10);
     private static final Map<String, String> SORT_PROPERTIES = Map.of(
             "createdAt", "createdAt",
             "agreementCount", "agreementCount",
@@ -60,8 +62,14 @@ public class PetitionService {
 
     @Transactional
     public PetitionResponse create(Long userId, PetitionCreateRequest request) {
-        User writer = userRepository.findById(userId)
+        User writer = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new PetitionException(Reason.USER_NOT_FOUND));
+        LocalDateTime now = LocalDateTime.now(clock);
+        petitionRepository.findLatestCreatedAtByWriterId(userId)
+                .filter(createdAt -> now.isBefore(createdAt.plus(CREATE_COOLDOWN)))
+                .ifPresent(createdAt -> {
+                    throw new PetitionException(Reason.PETITION_CREATE_COOLDOWN);
+                });
         ThresholdSetting setting = thresholdSettingRepository
                 .findByCategory(request.category())
                 .orElseThrow(() -> new PetitionException(
@@ -72,7 +80,7 @@ public class PetitionService {
                 request.title(),
                 request.content(),
                 setting.calculateTargetAgreementCount(),
-                LocalDateTime.now(clock)
+                now
         );
         return PetitionResponse.from(petitionRepository.save(petition));
     }
