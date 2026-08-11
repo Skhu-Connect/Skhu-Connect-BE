@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 public interface PetitionRepository extends JpaRepository<Petition, Long>,
@@ -20,6 +21,10 @@ public interface PetitionRepository extends JpaRepository<Petition, Long>,
     long countByStatusAndDeletedFalse(org.skhuconnect.petition.entity.PetitionStatus status);
 
     Optional<Petition> findByIdAndDeletedFalse(Long id);
+
+    @Query("select max(petition.createdAt) from Petition petition "
+            + "where petition.writer.id = :userId")
+    Optional<LocalDateTime> findLatestCreatedAtByWriterId(@Param("userId") Long userId);
 
     @EntityGraph(attributePaths = "writer")
     Page<Petition> findByDeletedFalse(Pageable pageable);
