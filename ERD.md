@@ -1348,4 +1348,4 @@ Codex는 다음 원칙을 따른다.
 | `created_at` | `DATETIME(6)` | 불가 |  | 생성 시각 |
 | `updated_at` | `DATETIME(6)` | 불가 |  | 수정 시각 |
 
-원본 이메일은 탈퇴 이력에 저장하지 않는다. 기존 콘텐츠의 User FK는 탈퇴한 기존 User row를 계속 참조하며 재가입한 새 User로 이전하지 않는다.
+원본 이메일은 탈퇴 이력에 저장하지 않는다. 기존 공개 청원·댓글·답글의 User FK는 탈퇴한 기존 User row를 계속 참조하며 재가입한 새 User로 이전하지 않는다. 현재 구현은 탈퇴 시 북마크와 사용자 Notification을 즉시 삭제하지 않고 `UserWithdrawalHistory`를 30일 후 자동 삭제하지 않는다.

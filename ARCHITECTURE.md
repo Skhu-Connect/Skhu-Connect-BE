@@ -191,8 +191,8 @@ PATCH /connect/notifications/read-all
 
 - 회원 탈퇴는 `User`의 `deleted=true`, `deletedAt=현재 시각`으로 처리한다.
 - 현재 비밀번호를 BCrypt로 검증한 뒤에만 사용자 식별자 비식별화, Refresh Token 및 FCM Token 삭제, 탈퇴 이력 저장을 하나의 트랜잭션에서 수행한다.
-- 탈퇴 시 `email`, `loginId`는 userId를 포함한 충돌 없는 내부 값으로 변경한다. 원본 이메일은 탈퇴 이력에 저장하지 않고 정규화된 이메일의 SHA-256 해시만 저장한다.
+- 탈퇴 시 `email`, `loginId`, `password`는 userId를 포함한 충돌 없는 내부 값으로 변경한다. 원본 이메일은 탈퇴 이력에 저장하지 않고 정규화된 이메일의 SHA-256 해시만 저장한다.
 - 탈퇴 이력의 이메일 해시와 탈퇴 시각을 기준으로 30일 동안 동일 학교 이메일 재가입을 차단한다. 30일이 지나면 기존 User를 복구하지 않고 새 User row를 생성한다.
-- 청원, 댓글, 신고, 알림, 동의, 북마크 등 기존 User FK는 변경하거나 삭제하지 않는다. 탈퇴 사용자 콘텐츠의 상태와 콘텐츠 자체의 `deleted`/`hidden` 상태는 독립적으로 유지한다.
+- 청원, 댓글, 답글, 신고, 사용자 Notification, 동의, 북마크 등 기존 User FK는 변경하거나 삭제하지 않는다. 현재 구현은 탈퇴 시 북마크와 사용자 Notification을 즉시 삭제하지 않고, `UserWithdrawalHistory`도 30일 후 자동 삭제하지 않는다. 탈퇴 사용자 콘텐츠의 상태와 콘텐츠 자체의 `deleted`/`hidden` 상태는 독립적으로 유지한다.
 - 기존 API에서 작성자 정보가 이미 노출되는 사용자 응답에 한해 탈퇴 작성자를 `탈퇴한 사용자`로 표시한다. 작성자 필드가 없는 청원 응답과 숫자형 `anonymousNumber`만 제공하는 댓글 응답에는 새 필드를 추가하지 않는다. 관리자 콘텐츠 응답에서는 기존 userId와 탈퇴 여부를 확인할 수 있다.
 - 로그인, Refresh Token 재발급, FCM Token 등록 및 Access Token 인증 시 탈퇴 여부를 확인한다.

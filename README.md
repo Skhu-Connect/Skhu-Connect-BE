@@ -123,6 +123,7 @@ org.skhuconnect
 - `AGENTS.md`: 작업 규칙과 Git 전략
 - `ARCHITECTURE.md`: 구현 구조와 도메인 정책
 - `ERD.md`: 구현 Entity와 후속 설계 Entity, 컬럼·관계·제약조건
+- `PRIVACY_POLICY.md`: 현재 코드 기준 개인정보 처리 및 App Store 개인정보 분류
 - `AUTH_POLICY.md`: 인증 정책
 
 ## Git
