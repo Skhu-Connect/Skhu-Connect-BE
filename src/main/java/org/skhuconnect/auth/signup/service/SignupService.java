@@ -3,8 +3,10 @@ package org.skhuconnect.auth.signup.service;
 import org.skhuconnect.auth.email.entity.EmailVerificationPurpose;
 import org.skhuconnect.auth.email.service.EmailVerificationService;
 import org.skhuconnect.auth.signup.dto.SignupRequest;
+import org.skhuconnect.auth.signup.entity.UserTermsAgreement;
 import org.skhuconnect.auth.signup.exception.SignupException;
 import org.skhuconnect.auth.signup.exception.SignupException.Reason;
+import org.skhuconnect.auth.signup.repository.UserTermsAgreementRepository;
 import org.skhuconnect.department.entity.Department;
 import org.skhuconnect.department.repository.DepartmentRepository;
 import org.skhuconnect.user.entity.User;
@@ -22,13 +24,15 @@ import java.time.LocalDateTime;
 @Service
 public class SignupService {
 
-
+    public static final String CURRENT_TERMS_VERSION = "1.0";
     private static final long REJOIN_RESTRICTION_DAYS = 30;
+
     private final EmailVerificationService emailVerificationService;
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserWithdrawalHistoryRepository withdrawalHistoryRepository;
+    private final UserTermsAgreementRepository termsAgreementRepository;
     private final UserEmailHasher emailHasher;
     private final Clock clock;
 
@@ -38,6 +42,7 @@ public class SignupService {
             DepartmentRepository departmentRepository,
             PasswordEncoder passwordEncoder,
             UserWithdrawalHistoryRepository withdrawalHistoryRepository,
+            UserTermsAgreementRepository termsAgreementRepository,
             UserEmailHasher emailHasher,
             Clock clock
     ) {
@@ -45,6 +50,7 @@ public class SignupService {
         this.userRepository = userRepository;
         this.departmentRepository = departmentRepository;
         this.withdrawalHistoryRepository = withdrawalHistoryRepository;
+        this.termsAgreementRepository = termsAgreementRepository;
         this.emailHasher = emailHasher;
         this.clock = clock;
         this.passwordEncoder = passwordEncoder;
@@ -52,6 +58,8 @@ public class SignupService {
 
     @Transactional
     public void signup(SignupRequest request) {
+        validateTerms(request);
+
         String email = emailVerificationService.consumeToken(
                 request.verificationToken(), EmailVerificationPurpose.SIGN_UP);
 
@@ -82,6 +90,21 @@ public class SignupService {
             userRepository.saveAndFlush(user);
         } catch (DataIntegrityViolationException exception) {
             throw duplicateException(exception);
+        }
+
+        termsAgreementRepository.save(UserTermsAgreement.create(
+                user,
+                CURRENT_TERMS_VERSION,
+                LocalDateTime.now(clock)
+        ));
+    }
+
+    private void validateTerms(SignupRequest request) {
+        if (!Boolean.TRUE.equals(request.termsAgreed())) {
+            throw new SignupException(Reason.TERMS_NOT_AGREED);
+        }
+        if (!CURRENT_TERMS_VERSION.equals(request.termsVersion())) {
+            throw new SignupException(Reason.UNSUPPORTED_TERMS_VERSION);
         }
     }
 

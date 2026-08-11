@@ -43,7 +43,57 @@ class SignupControllerTest {
     }
 
     @Test
-    void invalidRequestReturnsBadRequest() throws Exception {
+    void termsNotAgreedReturnsBadRequest() throws Exception {
+        mockMvc.perform(requestWithTerms("false", "\"1.0\""))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void missingTermsAgreedReturnsBadRequest() throws Exception {
+        mockMvc.perform(post("/connect/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "verificationToken": "raw-token",
+                                  "loginId": "student01",
+                                  "password": "raw-password",
+                                  "departmentId": 1,
+                                  "termsVersion": "1.0"
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void missingTermsVersionReturnsBadRequest() throws Exception {
+        mockMvc.perform(post("/connect/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "verificationToken": "raw-token",
+                                  "loginId": "student01",
+                                  "password": "raw-password",
+                                  "departmentId": 1,
+                                  "termsAgreed": true
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void unsupportedTermsVersionReturnsBadRequest() throws Exception {
+        doThrow(new SignupException(
+                SignupException.Reason.UNSUPPORTED_TERMS_VERSION))
+                .when(service).signup(any());
+
+        mockMvc.perform(requestWithTerms("true", "\"2.0\""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title")
+                        .value("지원하지 않는 이용약관 버전입니다"));
+    }
+
+    @Test
+    void existingValidationStillReturnsBadRequest() throws Exception {
         mockMvc.perform(post("/connect/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -51,7 +101,9 @@ class SignupControllerTest {
                                   "verificationToken": "",
                                   "loginId": "",
                                   "password": "",
-                                  "departmentId": 0
+                                  "departmentId": 0,
+                                  "termsAgreed": true,
+                                  "termsVersion": "1.0"
                                 }
                                 """))
                 .andExpect(status().isBadRequest());
@@ -107,6 +159,11 @@ class SignupControllerTest {
 
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
     validRequest() {
+        return requestWithTerms("true", "\"1.0\"");
+    }
+
+    private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder
+    requestWithTerms(String termsAgreed, String termsVersion) {
         return post("/connect/auth/signup")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -114,8 +171,10 @@ class SignupControllerTest {
                           "verificationToken": "raw-token",
                           "loginId": "student01",
                           "password": "raw-password",
-                          "departmentId": 1
+                          "departmentId": 1,
+                          "termsAgreed": %s,
+                          "termsVersion": %s
                         }
-                        """);
+                        """.formatted(termsAgreed, termsVersion));
     }
 }

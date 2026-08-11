@@ -1349,3 +1349,17 @@ Codex는 다음 원칙을 따른다.
 | `updated_at` | `DATETIME(6)` | 불가 |  | 수정 시각 |
 
 원본 이메일은 탈퇴 이력에 저장하지 않는다. 기존 공개 청원·댓글·답글의 User FK는 탈퇴한 기존 User row를 계속 참조하며 재가입한 새 User로 이전하지 않는다. 현재 구현은 탈퇴 시 북마크와 사용자 Notification을 즉시 삭제하지 않고 `UserWithdrawalHistory`를 30일 후 자동 삭제하지 않는다.
+---
+
+# 24. 이용약관 동의 이력 스키마
+
+회원가입 시 필수 이용약관 동의 이력은 `user_terms_agreements`로 관리한다. 약관 본문과 개인정보처리방침 동의 이력은 저장하지 않는다.
+
+| 컬럼 | 타입 | Null | 제약조건 | 설명 |
+|---|---|---:|---|---|
+| `id` | `BIGINT` | 불가 | PK, AUTO_INCREMENT | 동의 이력 식별자 |
+| `user_id` | `BIGINT` | 불가 | FK | 동의한 User |
+| `terms_version` | `VARCHAR(20)` | 불가 | User와 복합 UNIQUE | 동의한 이용약관 버전 |
+| `agreed_at` | `DATETIME(6)` | 불가 |  | 서버 기준 동의 시각 |
+
+`UNIQUE(user_id, terms_version)`으로 동일 사용자의 동일 버전 중복 저장을 방지한다. User 연관관계에는 cascade를 사용하지 않으며 기존 soft delete 정책을 변경하지 않는다. 현재 필수 이용약관 버전은 `1.0`이다.
