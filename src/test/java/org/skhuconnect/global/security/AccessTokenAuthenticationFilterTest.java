@@ -276,6 +276,17 @@ class AccessTokenAuthenticationFilterTest {
     }
 
     @Test
+    void userDepartmentPatchRequiresToken() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest(
+                "PATCH", "/connect/users/me/department");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, filterChain);
+
+        assertThat(response.getStatus()).isEqualTo(401);
+        verify(filterChain, never()).doFilter(request, response);
+    }
+    @Test
     void validUserTokenInjectsUserIdIntoUserActivityRequest() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest(
                 "GET", "/connect/users/me");
