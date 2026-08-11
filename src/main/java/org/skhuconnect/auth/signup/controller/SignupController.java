@@ -25,10 +25,13 @@ public class SignupController {
         this.signupService = signupService;
     }
 
-    @Operation(summary = "사용자 회원가입")
+    @Operation(
+            summary = "사용자 회원가입",
+            description = "학교 이메일 인증 후 계정을 생성합니다. 필수 이용약관에 동의하고 현재 지원 버전 1.0을 전달해야 합니다."
+    )
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "회원가입 성공"),
-            @ApiResponse(responseCode = "400", description = "요청 또는 인증 token 오류", content = @Content),
+            @ApiResponse(responseCode = "400", description = "요청·인증 token 오류, 약관 미동의 또는 지원하지 않는 약관 버전", content = @Content),
             @ApiResponse(responseCode = "404", description = "학과 없음", content = @Content),
             @ApiResponse(responseCode = "409", description = "중복 계정, 사용된 token 또는 탈퇴 후 30일 이내 재가입", content = @Content),
             @ApiResponse(responseCode = "410", description = "인증 token 만료", content = @Content)

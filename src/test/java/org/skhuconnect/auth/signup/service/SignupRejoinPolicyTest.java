@@ -7,6 +7,7 @@ import org.skhuconnect.auth.email.entity.EmailVerificationPurpose;
 import org.skhuconnect.auth.email.service.EmailVerificationService;
 import org.skhuconnect.auth.signup.dto.SignupRequest;
 import org.skhuconnect.auth.signup.exception.SignupException;
+import org.skhuconnect.auth.signup.repository.UserTermsAgreementRepository;
 import org.skhuconnect.department.entity.Department;
 import org.skhuconnect.department.repository.DepartmentRepository;
 import org.skhuconnect.user.entity.User;
@@ -36,6 +37,7 @@ class SignupRejoinPolicyTest {
     private PasswordEncoder passwords;
     private UserWithdrawalHistoryRepository histories;
     private UserEmailHasher emailHasher;
+    private UserTermsAgreementRepository termsAgreements;
     private SignupService service;
     private SignupRequest request;
 
@@ -47,10 +49,12 @@ class SignupRejoinPolicyTest {
         passwords = mock(PasswordEncoder.class);
         histories = mock(UserWithdrawalHistoryRepository.class);
         emailHasher = mock(UserEmailHasher.class);
+        termsAgreements = mock(UserTermsAgreementRepository.class);
         service = new SignupService(verifications, users, departments, passwords,
-                histories, emailHasher,
+                histories, termsAgreements, emailHasher,
                 Clock.fixed(Instant.parse("2030-01-31T00:00:00Z"), ZoneOffset.UTC));
-        request = new SignupRequest("token", "new-login", "password", 1L);
+        request = new SignupRequest(
+                "token", "new-login", "password", 1L, true, "1.0");
         when(verifications.consumeToken("token", EmailVerificationPurpose.SIGN_UP))
                 .thenReturn("student@office.skhu.ac.kr");
         when(emailHasher.hash("student@office.skhu.ac.kr")).thenReturn("h".repeat(64));

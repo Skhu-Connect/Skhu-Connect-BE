@@ -13,15 +13,20 @@ public class SignupExceptionHandler {
     @ExceptionHandler(SignupException.class)
     public ProblemDetail handleSignup(SignupException exception) {
         HttpStatus status = switch (exception.getReason()) {
-            case LOGIN_ID_ALREADY_EXISTS, EMAIL_ALREADY_EXISTS, REJOIN_RESTRICTED -> HttpStatus.CONFLICT;
+            case LOGIN_ID_ALREADY_EXISTS, EMAIL_ALREADY_EXISTS, REJOIN_RESTRICTED ->
+                    HttpStatus.CONFLICT;
             case DEPARTMENT_NOT_FOUND -> HttpStatus.NOT_FOUND;
+            case TERMS_NOT_AGREED, UNSUPPORTED_TERMS_VERSION -> HttpStatus.BAD_REQUEST;
         };
         ProblemDetail detail = ProblemDetail.forStatus(status);
         detail.setTitle(switch (exception.getReason()) {
             case LOGIN_ID_ALREADY_EXISTS -> "Login ID already exists";
             case EMAIL_ALREADY_EXISTS -> "Email already exists";
-            case REJOIN_RESTRICTED -> "Re-registration is available 30 days after withdrawal";
+            case REJOIN_RESTRICTED ->
+                    "Re-registration is available 30 days after withdrawal";
             case DEPARTMENT_NOT_FOUND -> "Department not found";
+            case TERMS_NOT_AGREED -> "필수 이용약관 동의가 필요합니다";
+            case UNSUPPORTED_TERMS_VERSION -> "지원하지 않는 이용약관 버전입니다";
         });
         return detail;
     }

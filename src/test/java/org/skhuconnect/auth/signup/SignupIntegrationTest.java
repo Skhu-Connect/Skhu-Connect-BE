@@ -6,6 +6,7 @@ import org.skhuconnect.auth.email.entity.EmailVerificationPurpose;
 import org.skhuconnect.auth.email.repository.EmailVerificationRepository;
 import org.skhuconnect.auth.email.service.VerificationHasher;
 import org.skhuconnect.auth.signup.dto.SignupRequest;
+import org.skhuconnect.auth.signup.repository.UserTermsAgreementRepository;
 import org.skhuconnect.auth.signup.service.SignupService;
 import org.skhuconnect.department.entity.Department;
 import org.skhuconnect.department.repository.DepartmentRepository;
@@ -41,6 +42,8 @@ class SignupIntegrationTest {
     private VerificationHasher hasher;
     @org.springframework.beans.factory.annotation.Autowired
     private PasswordEncoder passwordEncoder;
+    @org.springframework.beans.factory.annotation.Autowired
+    private UserTermsAgreementRepository termsAgreementRepository;
 
     @Test
     void signupPersistsUserAndConsumesTokenInOneTransaction() {
@@ -65,12 +68,19 @@ class SignupIntegrationTest {
         emailVerificationRepository.saveAndFlush(verification);
 
         signupService.signup(new SignupRequest(
-                rawToken, loginId, "raw-password", department.getId()));
+                rawToken, loginId, "raw-password", department.getId(),
+                true, "1.0"));
 
         User saved = userRepository.findByLoginId(loginId).orElseThrow();
         assertThat(saved.getEmail()).isEqualTo(email);
         assertThat(passwordEncoder.matches("raw-password", saved.getPassword())).isTrue();
         assertThat(saved.getPassword()).isNotEqualTo("raw-password");
         assertThat(verification.isUsed()).isTrue();
+        var agreement = termsAgreementRepository
+                .findByUserIdAndTermsVersion(saved.getId(), "1.0")
+                .orElseThrow();
+        assertThat(agreement.getUser().getId()).isEqualTo(saved.getId());
+        assertThat(agreement.getTermsVersion()).isEqualTo("1.0");
+        assertThat(agreement.getAgreedAt()).isNotNull();
     }
 }
