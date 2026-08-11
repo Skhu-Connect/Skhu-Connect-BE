@@ -8,6 +8,7 @@ public class PetitionException extends RuntimeException {
         PETITION_NOT_FOUND,
         PETITION_FORBIDDEN,
         PETITION_NOT_EDITABLE,
+        PETITION_CREATE_COOLDOWN,
         INVALID_SORT,
         INVALID_PAGE
     }

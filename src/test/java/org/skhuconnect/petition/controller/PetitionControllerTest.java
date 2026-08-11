@@ -116,6 +116,26 @@ class PetitionControllerTest {
     }
 
     @Test
+    void createCooldownReturnsTooManyRequestsProblemDetail() throws Exception {
+        doThrow(new PetitionException(PetitionException.Reason.PETITION_CREATE_COOLDOWN))
+                .when(service).create(eq(1L), any());
+
+        mockMvc.perform(post("/connect/petitions")
+                        .requestAttr("userId", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "category": "FACILITY",
+                                  "title": "시설 개선",
+                                  "content": "시설을 개선해주세요."
+                                }
+                                """))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.title")
+                        .value("Petition creation cooldown is active"));
+    }
+
+    @Test
     void differentWriterReturnsForbiddenProblemDetail() throws Exception {
         doThrow(new PetitionException(PetitionException.Reason.PETITION_FORBIDDEN))
                 .when(service).update(eq(1L), eq(10L), any());

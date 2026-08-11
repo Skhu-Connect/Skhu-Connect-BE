@@ -64,6 +64,26 @@ class PetitionRepositoryTest {
     }
 
     @Test
+    void latestCreatedAtIncludesSoftDeletedPetition() {
+        User writer = saveWriter();
+        Petition petition = petitionRepository.saveAndFlush(Petition.create(
+                writer,
+                PetitionCategory.FACILITY,
+                "삭제된 청원",
+                "삭제 후에도 쿨다운 계산에 포함됩니다.",
+                10,
+                LocalDateTime.now()
+        ));
+        LocalDateTime createdAt = petition.getCreatedAt();
+
+        petition.delete(LocalDateTime.now());
+        petitionRepository.flush();
+
+        assertThat(petitionRepository.findLatestCreatedAtByWriterId(writer.getId()))
+                .contains(createdAt);
+    }
+
+    @Test
     void excludesSoftDeletedPetition() {
         Petition petition = petitionRepository.saveAndFlush(Petition.create(
                 saveWriter(),
