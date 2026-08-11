@@ -6,7 +6,9 @@ public class SignupException extends RuntimeException {
         LOGIN_ID_ALREADY_EXISTS,
         EMAIL_ALREADY_EXISTS,
         REJOIN_RESTRICTED,
-        DEPARTMENT_NOT_FOUND
+        DEPARTMENT_NOT_FOUND,
+        TERMS_NOT_AGREED,
+        UNSUPPORTED_TERMS_VERSION
     }
 
     private final Reason reason;
