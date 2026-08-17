@@ -3,6 +3,7 @@ package org.skhuconnect.user.block.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -35,6 +36,14 @@ public class UserBlockController {
     @PostMapping
     public ResponseEntity<UserBlockResponse> block(
             @Parameter(hidden = true) @RequestAttribute("userId") Long userId,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    required = true,
+                    description = "targetType은 PETITION(해당 청원 작성자 차단) 또는 COMMENT(해당 댓글·대댓글 작성자 차단)입니다.",
+                    content = @Content(examples = {
+                            @ExampleObject(name = "청원 작성자 차단", value = "{\"targetType\":\"PETITION\",\"contentId\":42}"),
+                            @ExampleObject(name = "댓글·대댓글 작성자 차단", value = "{\"targetType\":\"COMMENT\",\"contentId\":42}")
+                    })
+            )
             @Valid @RequestBody UserBlockRequest request) {
         return ResponseEntity.status(201).body(userBlockService.block(userId, request));
     }
