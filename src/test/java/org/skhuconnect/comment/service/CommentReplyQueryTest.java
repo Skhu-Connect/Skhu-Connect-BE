@@ -59,6 +59,24 @@ class CommentReplyQueryTest {
         assertThat(reply.getParentComment()).isSameAs(root);
     }
 
+    @Test void authenticatedViewerUsesBlockedWriterQueriesButAnonymousViewerKeepsExistingQuery() {
+        var creation=mock(CommentCreationTransaction.class); var retry=mock(AnonymousNumberRetryService.class);
+        var comments=mock(CommentRepository.class); var likes=mock(CommentLikeRepository.class);
+        var petitions=mock(PetitionRepository.class);
+        var service=new CommentService(creation,retry,comments,likes,petitions,Clock.systemUTC());
+        Petition petition=mock(Petition.class);
+        when(petitions.findByIdAndDeletedFalseAndHiddenFalse(10L)).thenReturn(Optional.of(petition));
+        when(comments.findRootPageExcludingBlocked(eq(10L),eq(1L),any())).thenReturn(new PageImpl<>(List.of()));
+        when(comments.findRootPage(eq(10L),any())).thenReturn(new PageImpl<>(List.of()));
+
+        service.findAll(1L,10L,0,20);
+        service.findAll(null,10L,0,20);
+
+        verify(comments).findRootPageExcludingBlocked(eq(10L),eq(1L),any());
+        verify(comments).findRootPage(eq(10L),any());
+        verify(comments, never()).findRepliesExcludingBlocked(anyList(), anyLong());
+    }
+
     private static void id(Comment comment,long id,LocalDateTime time){
         ReflectionTestUtils.setField(comment,"id",id);
         ReflectionTestUtils.setField(comment,"createdAt",time);

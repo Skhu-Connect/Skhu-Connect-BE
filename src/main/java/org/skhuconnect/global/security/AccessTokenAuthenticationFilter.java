@@ -62,10 +62,6 @@ public class AccessTokenAuthenticationFilter extends OncePerRequestFilter {
         if (notificationPath || userPath) {
             return false;
         }
-        if (HttpMethod.GET.matches(request.getMethod())) {
-            return path.equals(PETITION_PATH)
-                    || path.matches(PETITION_PATH + "/\\d+");
-        }
         return false;
     }
 
@@ -78,7 +74,7 @@ public class AccessTokenAuthenticationFilter extends OncePerRequestFilter {
         boolean adminRequest = isAdminRequest(request);
         String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (authorization == null || !authorization.startsWith(BEARER_PREFIX)) {
-            if (!adminRequest && isPublicCommentListGet(request) && authorization == null) {
+            if (!adminRequest && isPublicGet(request) && authorization == null) {
                 filterChain.doFilter(request, response);
                 return;
             }
@@ -114,9 +110,11 @@ public class AccessTokenAuthenticationFilter extends OncePerRequestFilter {
         return path.equals(ADMIN_PATH) || path.startsWith(ADMIN_PATH + "/");
     }
 
-    private boolean isPublicCommentListGet(HttpServletRequest request) {
+    private boolean isPublicGet(HttpServletRequest request) {
         return HttpMethod.GET.matches(request.getMethod())
-                && request.getRequestURI().matches(PETITION_PATH + "/\\d+/comments");
+                && (request.getRequestURI().equals(PETITION_PATH)
+                || request.getRequestURI().matches(PETITION_PATH + "/\\d+")
+                || request.getRequestURI().matches(PETITION_PATH + "/\\d+/comments"));
     }
 
     private void unauthorized(HttpServletResponse response) throws IOException {

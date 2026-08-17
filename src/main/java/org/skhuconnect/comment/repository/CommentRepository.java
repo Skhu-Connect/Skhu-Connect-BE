@@ -27,14 +27,47 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
                     "and (c.deleted = false or exists (select r.id from Comment r where r.parentComment = c and r.deleted = false))")
     Page<Comment> findRootPage(@Param("petitionId") Long petitionId, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"anonymousNumber", "writer"})
+    @Query(value = """
+            select c from Comment c where c.petition.id = :petitionId and c.parentComment is null
+              and (c.deleted = false or exists (select r.id from Comment r where r.parentComment = c and r.deleted = false))
+              and not exists (select block from UserBlock block where block.blocker.id = :viewerId and block.blockedUser.id = c.writer.id)
+            """, countQuery = """
+            select count(c) from Comment c where c.petition.id = :petitionId and c.parentComment is null
+              and (c.deleted = false or exists (select r.id from Comment r where r.parentComment = c and r.deleted = false))
+              and not exists (select block from UserBlock block where block.blocker.id = :viewerId and block.blockedUser.id = c.writer.id)
+            """)
+    Page<Comment> findRootPageExcludingBlocked(@Param("petitionId") Long petitionId,
+                                                @Param("viewerId") Long viewerId, Pageable pageable);
+
     @EntityGraph(attributePaths = {"anonymousNumber", "writer", "parentComment"})
     List<Comment> findByParentCommentIdInAndDeletedFalseOrderByCreatedAtAscIdAsc(List<Long> parentIds);
+
+    @EntityGraph(attributePaths = {"anonymousNumber", "writer", "parentComment"})
+    @Query("""
+            select comment from Comment comment
+            where comment.parentComment.id in :parentIds and comment.deleted = false
+              and not exists (select block from UserBlock block
+                  where block.blocker.id = :viewerId and block.blockedUser.id = comment.writer.id)
+            order by comment.createdAt asc, comment.id asc
+            """)
+    List<Comment> findRepliesExcludingBlocked(@Param("parentIds") List<Long> parentIds,
+                                              @Param("viewerId") Long viewerId);
 
     @EntityGraph(attributePaths = {"petition", "parentComment"})
     Optional<Comment> findByIdAndPetitionId(Long id, Long petitionId);
 
     @EntityGraph(attributePaths = {"petition", "writer", "anonymousNumber", "parentComment"})
     Optional<Comment> findByIdAndPetitionIdAndDeletedFalse(Long id, Long petitionId);
+
+    @EntityGraph(attributePaths = {"writer"})
+    @Query("""
+            select comment from Comment comment
+            where comment.id = :commentId
+              and comment.deleted = false and comment.hidden = false
+              and comment.petition.deleted = false and comment.petition.hidden = false
+            """)
+    Optional<Comment> findVisibleById(@Param("commentId") Long commentId);
 
     @EntityGraph(attributePaths = {"petition", "anonymousNumber", "parentComment"})
     @Query("""
