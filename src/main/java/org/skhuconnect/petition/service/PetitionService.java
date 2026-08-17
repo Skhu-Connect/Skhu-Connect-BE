@@ -104,7 +104,13 @@ public class PetitionService {
 
     @Transactional(readOnly = true)
     public PetitionQueryResponse findDetail(Long petitionId) {
-        return findDetail(null, petitionId);
+        Petition petition = petitionRepository.findByIdAndDeletedFalseAndHiddenFalse(petitionId)
+                .orElseThrow(() -> new PetitionException(Reason.PETITION_NOT_FOUND));
+        OfficialAnswerDetailResponse officialAnswer = officialAnswerRepository
+                .findByPetitionId(petitionId)
+                .map(OfficialAnswerDetailResponse::from)
+                .orElse(null);
+        return PetitionQueryResponse.from(petition, LocalDateTime.now(clock), officialAnswer);
     }
 
     @Transactional(readOnly = true)
