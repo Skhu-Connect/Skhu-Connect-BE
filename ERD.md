@@ -48,6 +48,7 @@ Admin
 OfficialAnswer
 NotificationLog
 ThresholdSetting
+UserBlock
 ```
 
 다음 항목은 후속 설계이며 현재 코드에 Entity가 없다.
@@ -76,6 +77,8 @@ User 1 ─── N PetitionAnonymousNumber
 User 1 ─── N CommentLike
 User 1 ─── N Notification
 User 1 ─── 0..1 RefreshToken
+User 1 ─── N UserBlock (blocker)
+User 1 ─── N UserBlock (blockedUser)
 
 Admin 1 ─── N OfficialAnswer
 Admin 1 ─── N NotificationLog
@@ -1363,3 +1366,25 @@ Codex는 다음 원칙을 따른다.
 | `agreed_at` | `DATETIME(6)` | 불가 |  | 서버 기준 동의 시각 |
 
 `UNIQUE(user_id, terms_version)`으로 동일 사용자의 동일 버전 중복 저장을 방지한다. User 연관관계에는 cascade를 사용하지 않으며 기존 soft delete 정책을 변경하지 않는다. 현재 필수 이용약관 버전은 `1.0`이다.
+
+---
+
+# 25. UserBlock
+
+사용자가 콘텐츠 작성자를 단방향으로 영구 차단하는 관계를 관리한다.
+
+## 테이블명
+
+```text
+user_blocks
+```
+
+| 컬럼 | 타입 | Null | 제약조건 | 설명 |
+|---|---|---|---|---|
+| `id` | `BIGINT` | 불가 | PK, AUTO_INCREMENT | 차단 식별자 |
+| `blocker_id` | `BIGINT` | 불가 | FK | 차단한 사용자 |
+| `blocked_user_id` | `BIGINT` | 불가 | FK | 차단된 사용자 |
+| `created_at` | `DATETIME(6)` | 불가 |  | 차단 시각 |
+| `updated_at` | `DATETIME(6)` | 불가 |  | BaseEntity 수정 시각 |
+
+`UNIQUE(blocker_id, blocked_user_id)`로 중복 차단을 방지한다. 차단 해제는 제공하지 않으며, 로그인 사용자의 청원·댓글 조회 쿼리는 `NOT EXISTS user_blocks` 조건으로 차단 작성자를 제외한다.

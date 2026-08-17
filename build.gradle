@@ -38,6 +38,7 @@ dependencies {
 
     // Development
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    developmentOnly 'com.h2database:h2'
 
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
@@ -48,6 +49,7 @@ dependencies {
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly 'com.h2database:h2'
 }
 
 tasks.named('test') {

@@ -63,7 +63,7 @@ public class PetitionController {
     }
 
     @SecurityRequirements
-    @Operation(summary = "청원 목록 및 검색 조회")
+    @Operation(summary = "청원 목록 및 검색 조회", description = "로그인한 사용자는 영구 차단한 작성자의 청원을 볼 수 없습니다. 비로그인 조회에는 차단 필터가 적용되지 않습니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "청원 목록 조회 성공"),
             @ApiResponse(responseCode = "400", description = "필터 또는 정렬 값 오류",
@@ -71,6 +71,7 @@ public class PetitionController {
     })
     @GetMapping
     public PetitionPageResponse findAll(
+            @Parameter(hidden = true) @RequestAttribute(value = "userId", required = false) Long userId,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) PetitionCategory category,
             @RequestParam(required = false) PetitionStatus status,
@@ -78,8 +79,10 @@ public class PetitionController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt,desc") String sort
     ) {
-        return petitionService.findAll(new PetitionQueryCondition(
-                keyword, category, status, page, size, sort));
+        PetitionQueryCondition condition = new PetitionQueryCondition(
+                keyword, category, status, page, size, sort);
+        return userId == null ? petitionService.findAll(condition)
+                : petitionService.findAll(userId, condition);
     }
 
     @SecurityRequirements
@@ -87,6 +90,7 @@ public class PetitionController {
             summary = "청원 상세 조회",
             description = "공유받은 사용자도 로그인 없이 청원 본문을 조회할 수 있습니다. "
                     + "사용자 삭제, 관리자 숨김 또는 존재하지 않는 청원은 404를 반환합니다. "
+                    + "로그인한 사용자가 차단한 작성자의 청원도 404를 반환합니다. "
                     + "동의와 댓글 작성 등 상태 변경은 별도 인증 API를 사용합니다."
     )
     @ApiResponses({
@@ -94,8 +98,11 @@ public class PetitionController {
             @ApiResponse(responseCode = "404", description = "청원이 없거나 사용자 삭제 또는 관리자 숨김 상태", content = @Content)
     })
     @GetMapping("/{petitionId}")
-    public PetitionQueryResponse findDetail(@PathVariable Long petitionId) {
-        return petitionService.findDetail(petitionId);
+    public PetitionQueryResponse findDetail(
+            @Parameter(hidden = true) @RequestAttribute(value = "userId", required = false) Long userId,
+            @PathVariable Long petitionId) {
+        return userId == null ? petitionService.findDetail(petitionId)
+                : petitionService.findDetail(userId, petitionId);
     }
 
     @Operation(summary = "청원 수정")

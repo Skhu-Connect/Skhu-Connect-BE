@@ -87,10 +87,15 @@ public class PetitionService {
 
     @Transactional(readOnly = true)
     public PetitionPageResponse findAll(PetitionQueryCondition condition) {
+        return findAll(null, condition);
+    }
+
+    @Transactional(readOnly = true)
+    public PetitionPageResponse findAll(Long viewerId, PetitionQueryCondition condition) {
         LocalDateTime now = LocalDateTime.now(clock);
         PageRequest pageRequest = createPageRequest(condition);
         Page<PetitionQueryResponse> result = petitionRepository.findAll(
-                        PetitionSpecification.query(condition, now),
+                        PetitionSpecification.query(condition, now, viewerId),
                         pageRequest
                 )
                 .map(petition -> PetitionQueryResponse.from(petition, now, null));
@@ -99,8 +104,18 @@ public class PetitionService {
 
     @Transactional(readOnly = true)
     public PetitionQueryResponse findDetail(Long petitionId) {
-        Petition petition = petitionRepository.findByIdAndDeletedFalseAndHiddenFalse(
-                        petitionId)
+        Petition petition = petitionRepository.findByIdAndDeletedFalseAndHiddenFalse(petitionId)
+                .orElseThrow(() -> new PetitionException(Reason.PETITION_NOT_FOUND));
+        OfficialAnswerDetailResponse officialAnswer = officialAnswerRepository
+                .findByPetitionId(petitionId)
+                .map(OfficialAnswerDetailResponse::from)
+                .orElse(null);
+        return PetitionQueryResponse.from(petition, LocalDateTime.now(clock), officialAnswer);
+    }
+
+    @Transactional(readOnly = true)
+    public PetitionQueryResponse findDetail(Long viewerId, Long petitionId) {
+        Petition petition = petitionRepository.findVisibleByIdForViewer(petitionId, viewerId)
                 .orElseThrow(() -> new PetitionException(Reason.PETITION_NOT_FOUND));
         OfficialAnswerDetailResponse officialAnswer = officialAnswerRepository
                 .findByPetitionId(petitionId)

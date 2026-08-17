@@ -62,6 +62,7 @@ PORT (기본 8080)
 | 댓글·대댓글·공감 | `/connect/petitions/{petitionId}/comments/**` | 목록만 공개 | 200, 201, 204 |
 | 알림 목록·미읽음·읽음 처리 | `/connect/notifications/**` | 필요 | 200, 204 |
 | 내 정보·활동 내역 | `/connect/users/me/**` | 필요 | 200 |
+| 사용자 영구 차단 | `POST /connect/users/me/blocks` | 필요 | 201 |
 
 공통 오류 응답은 Problem Detail 형식이다. 요청 검증 실패는 400, Access Token 누락·위조·만료·잘못된 role은 401, 작성자 권한 위반은 403, 존재하지 않거나 사용자에게 노출할 수 없는 데이터는 404, 중복 참여 또는 허용되지 않는 상태 충돌은 409를 사용한다. 인증 도메인의 만료 상태는 해당 Controller의 Swagger 명세를 따른다.
 

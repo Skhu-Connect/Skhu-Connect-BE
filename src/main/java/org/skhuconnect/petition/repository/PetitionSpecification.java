@@ -18,14 +18,28 @@ public final class PetitionSpecification {
     private PetitionSpecification() {
     }
 
+    public static Specification<Petition> query(PetitionQueryCondition condition, LocalDateTime now) {
+        return query(condition, now, null);
+    }
+
     public static Specification<Petition> query(
             PetitionQueryCondition condition,
-            LocalDateTime now
+            LocalDateTime now,
+            Long viewerId
     ) {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(criteriaBuilder.isFalse(root.get("deleted")));
             predicates.add(criteriaBuilder.isFalse(root.get("hidden")));
+            if (viewerId != null) {
+                var blocked = query.subquery(Long.class);
+                var userBlock = blocked.from(org.skhuconnect.user.block.entity.UserBlock.class);
+                blocked.select(userBlock.get("id"));
+                blocked.where(
+                        criteriaBuilder.equal(userBlock.get("blocker").get("id"), viewerId),
+                        criteriaBuilder.equal(userBlock.get("blockedUser").get("id"), root.get("writer").get("id")));
+                predicates.add(criteriaBuilder.not(criteriaBuilder.exists(blocked)));
+            }
 
             String keyword = condition.normalizedKeyword();
             if (keyword != null) {

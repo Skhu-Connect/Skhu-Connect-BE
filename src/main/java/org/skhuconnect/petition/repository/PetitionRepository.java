@@ -33,6 +33,16 @@ public interface PetitionRepository extends JpaRepository<Petition, Long>,
 
     @Query("""
             select petition from Petition petition
+            where petition.id = :petitionId and petition.deleted = false and petition.hidden = false
+              and (:viewerId is null or not exists (
+                  select block from UserBlock block
+                  where block.blocker.id = :viewerId and block.blockedUser.id = petition.writer.id))
+            """)
+    Optional<Petition> findVisibleByIdForViewer(@Param("petitionId") Long petitionId,
+                                                 @Param("viewerId") Long viewerId);
+
+    @Query("""
+            select petition from Petition petition
             where petition.writer.id = :userId
               and petition.deleted = false
               and petition.hidden = false

@@ -50,11 +50,14 @@ public class CommentService {
         validatePage(page,size);
         petitionRepository.findByIdAndDeletedFalseAndHiddenFalse(petitionId)
                 .orElseThrow(() -> new CommentException(Reason.PETITION_NOT_FOUND));
-        Page<Comment> roots=commentRepository.findRootPage(petitionId,
-                PageRequest.of(page,size,Sort.by(Sort.Order.asc("createdAt"),Sort.Order.asc("id"))));
+        Pageable pageRequest = PageRequest.of(page,size,Sort.by(Sort.Order.asc("createdAt"),Sort.Order.asc("id")));
+        Page<Comment> roots = userId == null
+                ? commentRepository.findRootPage(petitionId, pageRequest)
+                : commentRepository.findRootPageExcludingBlocked(petitionId, userId, pageRequest);
         List<Long> rootIds=roots.getContent().stream().map(Comment::getId).toList();
-        List<Comment> replies=rootIds.isEmpty()?List.of():
-                commentRepository.findByParentCommentIdInAndDeletedFalseOrderByCreatedAtAscIdAsc(rootIds);
+        List<Comment> replies = rootIds.isEmpty() ? List.of() : userId == null
+                ? commentRepository.findByParentCommentIdInAndDeletedFalseOrderByCreatedAtAscIdAsc(rootIds)
+                : commentRepository.findRepliesExcludingBlocked(rootIds, userId);
         Map<Long,List<Comment>> grouped=replies.stream().collect(Collectors.groupingBy(
                 c->c.getParentComment().getId(),LinkedHashMap::new,Collectors.toList()));
         List<Comment> all=new ArrayList<>(roots.getContent()); all.addAll(replies);

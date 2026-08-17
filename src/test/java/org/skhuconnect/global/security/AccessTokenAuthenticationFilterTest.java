@@ -183,17 +183,18 @@ class AccessTokenAuthenticationFilterTest {
     }
 
     @Test
-    void publicGetIgnoresValidOrInvalidAuthorizationHeader() throws Exception {
-        for (String token : List.of("valid-token", "invalid-token")) {
-            MockHttpServletRequest request = new MockHttpServletRequest(
-                    "GET", "/connect/petitions/10");
-            request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);
-            MockHttpServletResponse response = new MockHttpServletResponse();
+    void publicGetAcceptsAnonymousRequestButValidatesProvidedAuthorizationHeader() throws Exception {
+        MockHttpServletRequest anonymous = new MockHttpServletRequest("GET", "/connect/petitions/10");
+        filter.doFilter(anonymous, new MockHttpServletResponse(), filterChain);
+        verify(jwtDecoder, never()).decode(org.mockito.ArgumentMatchers.anyString());
 
-            filter.doFilter(request, response, filterChain);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/connect/petitions/10");
+        request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer valid-token");
+        when(jwtDecoder.decode("valid-token")).thenReturn(userJwt("42", "USER"));
+        filter.doFilter(request, new MockHttpServletResponse(), filterChain);
 
-            verify(jwtDecoder, never()).decode(token);
-        }
+        verify(jwtDecoder).decode("valid-token");
+        assertThat(request.getAttribute(AccessTokenAuthenticationFilter.USER_ID_ATTRIBUTE)).isEqualTo(42L);
     }
 
     @Test
