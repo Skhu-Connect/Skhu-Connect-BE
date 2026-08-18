@@ -70,7 +70,7 @@ class UserBlockServiceTest {
                 .isEqualTo(UserBlockException.Reason.ALREADY_BLOCKED);
     }
 
-    @Test void rejectsHiddenDeletedOrWithdrawnTarget() {
+    @Test void rejectsHiddenDeletedContentButAllowsWithdrawnWriter() {
         User blocker = user(1L, false);
         when(users.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(blocker));
         when(petitions.findByIdAndDeletedFalseAndHiddenFalse(10L)).thenReturn(Optional.empty());
@@ -80,10 +80,11 @@ class UserBlockServiceTest {
         Petition petition = mock(Petition.class); User withdrawnTarget = user(2L, true);
         when(petition.getWriter()).thenReturn(withdrawnTarget);
         when(petitions.findByIdAndDeletedFalseAndHiddenFalse(10L)).thenReturn(Optional.of(petition));
-        assertThatThrownBy(() -> service.block(1L, new UserBlockRequest(BlockTargetType.PETITION, 10L)))
-                .isInstanceOf(UserBlockException.class)
-                .extracting(e -> ((UserBlockException) e).getReason())
-                .isEqualTo(UserBlockException.Reason.TARGET_USER_NOT_FOUND);
+        when(blocks.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        service.block(1L, new UserBlockRequest(BlockTargetType.PETITION, 10L));
+
+        verify(blocks).saveAndFlush(any(UserBlock.class));
     }
 
     private User user(Long id, boolean deleted) { User user = mock(User.class); when(user.getId()).thenReturn(id); when(user.isDeleted()).thenReturn(deleted); return user; }

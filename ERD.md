@@ -1387,4 +1387,4 @@ user_blocks
 | `created_at` | `DATETIME(6)` | 불가 |  | 차단 시각 |
 | `updated_at` | `DATETIME(6)` | 불가 |  | BaseEntity 수정 시각 |
 
-`UNIQUE(blocker_id, blocked_user_id)`로 중복 차단을 방지한다. 차단 해제는 제공하지 않으며, 로그인 사용자의 청원·댓글 조회 쿼리는 `NOT EXISTS user_blocks` 조건으로 차단 작성자를 제외한다.
+`UNIQUE(blocker_id, blocked_user_id)`로 중복 차단을 방지한다. 탈퇴 작성자의 기존 콘텐츠도 해당 기존 User ID 기준으로 차단할 수 있지만, 같은 이메일로 재가입한 새 User ID에는 자동 승계되지 않는다. 차단 해제는 제공하지 않으며, 로그인 사용자의 청원·댓글 조회 쿼리는 `NOT EXISTS user_blocks` 조건으로 차단 작성자를 제외한다.
