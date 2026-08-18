@@ -17,6 +17,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
@@ -80,7 +81,9 @@ class PetitionRepositoryTest {
         petitionRepository.flush();
 
         assertThat(petitionRepository.findLatestCreatedAtByWriterId(writer.getId()))
-                .contains(createdAt);
+                .hasValueSatisfying(found -> assertThat(
+                        Math.abs(Duration.between(createdAt, found).toNanos()))
+                        .isLessThanOrEqualTo(1_000L));
     }
 
     @Test

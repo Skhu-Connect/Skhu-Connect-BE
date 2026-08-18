@@ -36,7 +36,6 @@ public class UserBlockService {
         User blocker = userRepository.findByIdAndDeletedFalse(blockerId)
                 .orElseThrow(() -> error(UserBlockException.Reason.BLOCKER_NOT_FOUND));
         User blockedUser = findWriter(request.targetType(), request.contentId());
-        if (blockedUser.isDeleted()) throw error(UserBlockException.Reason.TARGET_USER_NOT_FOUND);
         if (blocker.getId().equals(blockedUser.getId())) throw error(UserBlockException.Reason.SELF_BLOCK);
         if (userBlockRepository.existsByBlockerIdAndBlockedUserId(blockerId, blockedUser.getId())) {
             throw error(UserBlockException.Reason.ALREADY_BLOCKED);
