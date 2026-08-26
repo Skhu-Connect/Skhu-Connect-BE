@@ -7,9 +7,12 @@ import org.skhuconnect.notification.dto.NotificationPageResponse;
 import org.skhuconnect.petition.dto.response.PetitionPageResponse;
 import org.skhuconnect.user.dto.UserCommentPageResponse;
 import org.skhuconnect.user.dto.UserMeResponse;
+import org.skhuconnect.user.dto.NotificationSettingsResponse;
+import org.skhuconnect.user.exception.UserActivityException;
 import org.skhuconnect.user.exception.UserActivityExceptionHandler;
 import org.skhuconnect.user.service.UserActivityService;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.http.MediaType;
 
 import java.util.List;
 
@@ -18,6 +21,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup;
@@ -40,7 +44,8 @@ class UserActivityControllerTest {
     void returnsOwnProfileWithoutPasswordOrInternalUserId() throws Exception {
         when(service.findMe(1L)).thenReturn(new UserMeResponse(
                 "user@office.skhu.ac.kr", "login-user",
-                "SW", "소프트웨어공학과", true));
+                "SW", "소프트웨어공학과", true,
+                new NotificationSettingsResponse(true, true, true, false, true)));
 
         mockMvc.perform(get("/connect/users/me").requestAttr("userId", 1L))
                 .andExpect(status().isOk())
@@ -48,8 +53,44 @@ class UserActivityControllerTest {
                 .andExpect(jsonPath("$.loginId").value("login-user"))
                 .andExpect(jsonPath("$.departmentCode").value("SW"))
                 .andExpect(jsonPath("$.notificationEnabled").value(true))
+                .andExpect(jsonPath("$.notificationSettings.like").value(false))
                 .andExpect(jsonPath("$.id").doesNotExist())
                 .andExpect(jsonPath("$.password").doesNotExist());
+    }
+
+    @Test
+    void partiallyUpdatesNotificationSettingsAndReturnsAllValues() throws Exception {
+        when(service.updateNotificationSettings(
+                org.mockito.ArgumentMatchers.eq(1L),
+                org.mockito.ArgumentMatchers.any()))
+                .thenReturn(new NotificationSettingsResponse(
+                        true, true, true, false, true));
+
+        mockMvc.perform(patch("/connect/users/me/notification-settings")
+                        .requestAttr("userId", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"like\":false}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.agreement").value(true))
+                .andExpect(jsonPath("$.answer").value(true))
+                .andExpect(jsonPath("$.reply").value(true))
+                .andExpect(jsonPath("$.like").value(false))
+                .andExpect(jsonPath("$.notice").value(true));
+    }
+
+    @Test
+    void emptyNotificationSettingsRequestIsBadRequest() throws Exception {
+        when(service.updateNotificationSettings(
+                org.mockito.ArgumentMatchers.eq(1L),
+                org.mockito.ArgumentMatchers.any()))
+                .thenThrow(new UserActivityException(
+                        UserActivityException.Reason.INVALID_NOTIFICATION_SETTINGS));
+
+        mockMvc.perform(patch("/connect/users/me/notification-settings")
+                        .requestAttr("userId", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

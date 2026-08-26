@@ -1,7 +1,7 @@
 # SKHU Connect Architecture
 
-> Last Updated: 2026-08-11
-> 기준: 로컬 `main` 커밋 `670d084`, 로컬 `dev` 커밋 `903716c`; 두 브랜치의 코드 트리 동일
+> Last Updated: 2026-08-27
+> 기준: `fix/#57` 브랜치의 알림 종류별 설정 API 구현
 
 ## 1. 서비스와 현재 상태
 
@@ -27,7 +27,7 @@ SKHU Connect는 성공회대학교 학생 청원 플랫폼이다. 학생은 학�
 
 ### 미구현·후속 범위
 
-알림 수신 설정 변경 API와 브라우저 Push 알림이 남아 있다.
+브라우저 Push 알림이 남아 있다.
 
 ## 2. 기술 구조
 
@@ -147,6 +147,7 @@ Notification Entity, 조회·읽음 API와 주요 이벤트 연결이 `dev`에 �
 - 동일 이벤트·수신자는 최초 1회만 생성하고 `event_key` UNIQUE로 동시 중복도 막는다.
 - 자기 자신이 발생시킨 댓글·공감 알림은 생성하지 않는다.
 - `notification_enabled=false`이면 새 알림을 생성하지 않는다.
+- 알림 종류는 `AGREEMENT`, `ANSWER`, `REPLY`, `LIKE`, `NOTICE` 포인트로 매핑하며, 사용자가 끈 포인트의 알림은 DB에 생성하지 않는다.
 - 알림 삭제는 없다.
 - 숨김·삭제된 청원을 가리키는 알림은 목록과 미읽음 개수에서 제외한다. 행 자체는 남기고 조회에서만 거른다. 청원과 무관한 `NOTICE`는 항상 노출한다.
 - 개별·전체 읽음은 멱등이고 `read_at`을 저장한다.
@@ -175,6 +176,8 @@ PATCH /connect/notifications/read-all
 
 - 모든 API는 Access Token이 필요하며 JWT `sub`에서 얻은 `userId`만 사용한다.
 - `GET /connect/users/me`는 이메일, 로그인 ID, 학과 코드·이름, 알림 수신 여부를 반환하고 DB PK와 비밀번호는 반환하지 않는다.
+- `GET /connect/users/me`의 `notificationSettings`는 `agreement`, `answer`, `reply`, `like`, `notice` 전체 상태를 반환한다.
+- `PATCH /connect/users/me/notification-settings`는 전달된 종류별 설정만 갱신하고 갱신 후 전체 상태를 반환한다. 빈 요청은 400이다.
 - `/connect/users/me/petitions`, `/agreements`, `/bookmarks`, `/comments`, `/notifications`는 본인 데이터만 조회한다.
 - 청원 활동은 hidden/deleted 청원을 제외하고 기존 `PetitionQueryResponse`의 유효 상태 계산을 재사용한다.
 - 댓글 활동은 삭제 댓글과 hidden/deleted 청원을 제외한다. 숨김 댓글은 기존 댓글 응답의 안내 문구 정책을 따른다.

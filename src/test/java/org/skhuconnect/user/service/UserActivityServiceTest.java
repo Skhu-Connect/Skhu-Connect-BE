@@ -12,6 +12,7 @@ import org.skhuconnect.notification.dto.NotificationPageResponse;
 import org.skhuconnect.notification.service.NotificationService;
 import org.skhuconnect.petition.repository.PetitionRepository;
 import org.skhuconnect.user.entity.User;
+import org.skhuconnect.user.dto.NotificationSettingsUpdateRequest;
 import org.skhuconnect.user.exception.UserActivityException;
 import org.skhuconnect.user.repository.UserRepository;
 import org.springframework.data.domain.PageImpl;
@@ -71,6 +72,49 @@ class UserActivityServiceTest {
         assertThat(response.loginId()).isEqualTo("login-user");
         assertThat(response.departmentCode()).isEqualTo("SW");
         assertThat(response.notificationEnabled()).isTrue();
+        assertThat(response.notificationSettings().like()).isTrue();
+    }
+
+    @Test
+    void updatesOnlyProvidedNotificationSettings() {
+        User user = User.create(
+                "user@office.skhu.ac.kr", "login-user", "encoded",
+                mock(Department.class));
+        when(users.findByIdForUpdate(1L)).thenReturn(Optional.of(user));
+        when(users.findById(1L)).thenReturn(Optional.of(user));
+
+        var response = service.updateNotificationSettings(1L,
+                new NotificationSettingsUpdateRequest(
+                        null, null, null, false, null));
+
+        assertThat(response.agreement()).isTrue();
+        assertThat(response.answer()).isTrue();
+        assertThat(response.reply()).isTrue();
+        assertThat(response.like()).isFalse();
+        assertThat(response.notice()).isTrue();
+        assertThat(service.findMe(1L).notificationSettings().like()).isFalse();
+    }
+
+    @Test
+    void rejectsEmptyNotificationSettings() {
+        assertThatThrownBy(() -> service.updateNotificationSettings(1L,
+                new NotificationSettingsUpdateRequest(
+                        null, null, null, null, null)))
+                .isInstanceOf(UserActivityException.class)
+                .extracting("reason")
+                .isEqualTo(UserActivityException.Reason.INVALID_NOTIFICATION_SETTINGS);
+    }
+
+    @Test
+    void missingUserCannotUpdateNotificationSettings() {
+        when(users.findByIdForUpdate(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.updateNotificationSettings(1L,
+                new NotificationSettingsUpdateRequest(
+                        null, true, null, null, null)))
+                .isInstanceOf(UserActivityException.class)
+                .extracting("reason")
+                .isEqualTo(UserActivityException.Reason.USER_NOT_FOUND);
     }
 
     @Test

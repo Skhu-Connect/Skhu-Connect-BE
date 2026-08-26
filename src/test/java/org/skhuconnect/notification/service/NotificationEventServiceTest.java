@@ -8,6 +8,7 @@ import org.skhuconnect.comment.entity.*;
 import org.skhuconnect.notification.dto.NotificationResponse;
 import org.skhuconnect.notification.entity.Notification;
 import org.skhuconnect.notification.entity.NotificationType;
+import org.skhuconnect.notification.entity.NotificationPoint;
 import org.skhuconnect.notification.fcm.FcmPushService;
 import org.skhuconnect.notification.repository.NotificationRepository;
 import org.skhuconnect.petition.entity.Petition;
@@ -78,6 +79,20 @@ class NotificationEventServiceTest {
 
         verify(notifications,never()).saveAndFlush(any());
     }
+    @Test void disabledPointBlocksOnlyItsNotificationType() {
+        User owner=user(1L), actor=user(2L);
+        when(owner.allows(NotificationPoint.LIKE)).thenReturn(false);
+        Petition petition=mock(Petition.class); when(petition.getId()).thenReturn(10L);
+        PetitionAnonymousNumber ownerMap=PetitionAnonymousNumber.create(petition,owner,1);
+        PetitionAnonymousNumber actorMap=PetitionAnonymousNumber.create(petition,actor,2);
+        Comment root=Comment.create(petition,owner,ownerMap,"root"); ReflectionTestUtils.setField(root,"id",20L);
+        Comment reply=Comment.create(petition,actor,actorMap,root,"reply"); ReflectionTestUtils.setField(reply,"id",21L);
+
+        service.onCommentLiked(root,actor);
+        service.onReplyCreated(reply);
+
+        verify(notifications,times(1)).saveAndFlush(any(Notification.class));
+    }
     @Test void pushMessageIsPublishedWithValuesSnapshottedInsideTransaction() {
         User writer=user(1L); Petition petition=mock(Petition.class);
         when(petition.getId()).thenReturn(10L); when(petition.getWriter()).thenReturn(writer);
@@ -93,5 +108,5 @@ class NotificationEventServiceTest {
         assertThat(published.title()).isEqualTo("SKHU Connect");
         assertThat(published.body()).isEqualTo(NotificationResponse.message(NotificationType.PETITION_ANSWERED));
     }
-    private User user(long id){ User u=mock(User.class); when(u.getId()).thenReturn(id); when(u.isNotificationEnabled()).thenReturn(true); return u; }
+    private User user(long id){ User u=mock(User.class); when(u.getId()).thenReturn(id); when(u.isNotificationEnabled()).thenReturn(true); when(u.allows(any())).thenReturn(true); return u; }
 }

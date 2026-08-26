@@ -1,6 +1,6 @@
 # SKHU Connect ERD
 
-> Last Updated: 2026-08-06
+> Last Updated: 2026-08-27
 >
 > 본 문서는 SKHU Connect 백엔드의 MVP 데이터베이스 설계 기준이다.
 > Entity 구현과 데이터베이스 변경은 `ARCHITECTURE.md`, API 명세서, 본 문서를 기준으로 진행한다.
@@ -182,6 +182,11 @@ users
 | `password` | `VARCHAR(255)` | 불가 |  | BCrypt 암호화 비밀번호 |
 | `department_id` | `BIGINT` | 불가 | FK | 사용자가 선택한 학과 |
 | `notification_enabled` | `BOOLEAN` | 불가 | DEFAULT TRUE | 전체 웹 알림 활성화 여부 |
+| `notify_agreement` | `BOOLEAN` | 불가 | DEFAULT TRUE | 공감 도달 알림 활성화 여부 |
+| `notify_answer` | `BOOLEAN` | 불가 | DEFAULT TRUE | 답변 등록 알림 활성화 여부 |
+| `notify_reply` | `BOOLEAN` | 불가 | DEFAULT TRUE | 답글 알림 활성화 여부 |
+| `notify_like` | `BOOLEAN` | 불가 | DEFAULT TRUE | 댓글·답글 공감 알림 활성화 여부 |
+| `notify_notice` | `BOOLEAN` | 불가 | DEFAULT TRUE | 공지사항 알림 활성화 여부 |
 | `created_at` | `DATETIME(6)` | 불가 |  | 가입 시각 |
 | `updated_at` | `DATETIME(6)` | 불가 |  | 수정 시각 |
 
@@ -825,7 +830,7 @@ UNIQUE(event_key)
 - 전체 읽음 처리 시 사용자의 읽지 않은 알림을 모두 변경한다.
 - 읽은 알림도 목록에서 유지한다.
 - 웹 브라우저 Push 알림은 MVP에서 제외한다.
-- `notification_enabled=false`인 사용자에게는 새 알림을 생성하지 않는다.
+- `notification_enabled=false`인 사용자와 해당 알림 종류 설정을 끈 사용자에게는 새 알림을 생성하지 않는다.
 
 사용자 알림 유형과 수신 대상은 본 문서의 사용자 알림 확정 정책을 따른다.
 
@@ -1303,11 +1308,12 @@ Codex는 다음 원칙을 따른다.
 - 대댓글은 원댓글과 같은 `PetitionAnonymousNumber` 체계를 사용한다. 기존 매핑은 재사용하고 최초 활동 사용자는 기존 발급 정책으로 새 매핑을 발급한다.
 ## 사용자 알림 확정 정책
 
-- 유형은 `PETITION_AGREEMENT_60_PERCENT`, `PETITION_AGREEMENT_100_PERCENT`, `PETITION_UNDER_REVIEW`, `PETITION_ANSWERED`, `COMMENT_REPLY`, `COMMENT_LIKE`, `REPLY_LIKE`이다.
+- 유형은 `PETITION_AGREEMENT_60_PERCENT`, `PETITION_AGREEMENT_100_PERCENT`, `PETITION_UNDER_REVIEW`, `PETITION_ANSWERED`, `COMMENT_REPLY`, `COMMENT_LIKE`, `REPLY_LIKE`, `NOTICE`이다.
+- 유형은 각각 `AGREEMENT`, `ANSWER`, `REPLY`, `LIKE`, `NOTICE` 포인트에 속하며 User의 종류별 설정을 공통 생성 게이트에서 검사한다.
 - 청원 작성자는 60%, 100%, 검토 시작, 공식 답변 알림을 받는다.
 - 청원 동의자는 검토 시작과 공식 답변 알림을 받되 작성자는 중복 수신하지 않는다.
 - 원댓글 작성자는 대댓글과 원댓글 공감 알림을, 대댓글 작성자는 대댓글 공감 알림을 받는다.
-- 자기 이벤트와 `notification_enabled=false` 수신자에게는 생성하지 않는다.
+- 자기 이벤트, `notification_enabled=false` 수신자, 해당 종류 설정을 끈 수신자에게는 생성하지 않는다.
 - `event_key`로 이벤트별·수신자별 최초 1회 생성을 보장한다.
 - 알림은 삭제하지 않으며 개별·전체 읽음, 최신순 목록, 읽지 않은 개수 조회를 지원한다.
 ## NotificationLog implementation decisions
