@@ -9,6 +9,7 @@ import org.skhuconnect.comment.entity.Comment;
 import org.skhuconnect.comment.entity.PetitionAnonymousNumber;
 import org.skhuconnect.department.entity.Department;
 import org.skhuconnect.notification.repository.FcmTokenRepository;
+import org.skhuconnect.notification.entity.NotificationPoint;
 import org.skhuconnect.petition.entity.Petition;
 import org.skhuconnect.petition.entity.PetitionCategory;
 import org.skhuconnect.user.entity.User;
@@ -82,6 +83,7 @@ class UserWithdrawalServiceTest {
         assertThat(user.getEmail()).isEqualTo("withdrawn-7@deleted.invalid");
         assertThat(user.getLoginId()).isEqualTo("withdrawn-7");
         assertThat(user.isNotificationEnabled()).isFalse();
+        assertThat(NotificationPoint.values()).allMatch(point -> !user.allows(point));
         assertThat(petition.getWriter()).isSameAs(user);
         assertThat(comment.getWriter()).isSameAs(user);
         assertThat(petition.isDeleted()).isFalse();

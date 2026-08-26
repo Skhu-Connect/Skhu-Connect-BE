@@ -15,6 +15,7 @@ public class UserActivityException extends RuntimeException {
 
     public enum Reason {
         USER_NOT_FOUND("User not found"),
+        INVALID_NOTIFICATION_SETTINGS("At least one notification setting is required"),
         INVALID_PAGE("Invalid user activity page request");
 
         private final String message;

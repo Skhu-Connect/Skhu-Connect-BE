@@ -13,6 +13,7 @@ import jakarta.persistence.Table;
 import org.hibernate.annotations.ColumnDefault;
 import org.skhuconnect.department.entity.Department;
 import org.skhuconnect.global.entity.BaseEntity;
+import org.skhuconnect.notification.entity.NotificationPoint;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -52,6 +53,26 @@ public class User extends BaseEntity {
     @ColumnDefault("true")
     private boolean notificationEnabled;
 
+    @Column(name = "notify_agreement", nullable = false)
+    @ColumnDefault("true")
+    private boolean notifyAgreement = true;
+
+    @Column(name = "notify_answer", nullable = false)
+    @ColumnDefault("true")
+    private boolean notifyAnswer = true;
+
+    @Column(name = "notify_reply", nullable = false)
+    @ColumnDefault("true")
+    private boolean notifyReply = true;
+
+    @Column(name = "notify_like", nullable = false)
+    @ColumnDefault("true")
+    private boolean notifyLike = true;
+
+    @Column(name = "notify_notice", nullable = false)
+    @ColumnDefault("true")
+    private boolean notifyNotice = true;
+
     @Column(name = "deleted", nullable = false)
     @ColumnDefault("false")
     private boolean deleted;
@@ -77,6 +98,11 @@ public class User extends BaseEntity {
         );
         this.department = Objects.requireNonNull(department, "department must not be null");
         this.notificationEnabled = true;
+        this.notifyAgreement = true;
+        this.notifyAnswer = true;
+        this.notifyReply = true;
+        this.notifyLike = true;
+        this.notifyNotice = true;
         this.deleted = false;
     }
 
@@ -104,6 +130,30 @@ public class User extends BaseEntity {
         this.notificationEnabled = enabled;
     }
 
+    public void changeNotificationSettings(
+            Boolean agreement,
+            Boolean answer,
+            Boolean reply,
+            Boolean like,
+            Boolean notice
+    ) {
+        if (agreement != null) notifyAgreement = agreement;
+        if (answer != null) notifyAnswer = answer;
+        if (reply != null) notifyReply = reply;
+        if (like != null) notifyLike = like;
+        if (notice != null) notifyNotice = notice;
+    }
+
+    public boolean allows(NotificationPoint point) {
+        return switch (point) {
+            case AGREEMENT -> notifyAgreement;
+            case ANSWER -> notifyAnswer;
+            case REPLY -> notifyReply;
+            case LIKE -> notifyLike;
+            case NOTICE -> notifyNotice;
+        };
+    }
+
     public void withdraw(LocalDateTime withdrawnAt) {
         if (deleted) {
             throw new IllegalStateException("user is already withdrawn");
@@ -115,6 +165,11 @@ public class User extends BaseEntity {
         this.loginId = "withdrawn-" + id;
         this.password = "WITHDRAWN:" + id;
         this.notificationEnabled = false;
+        this.notifyAgreement = false;
+        this.notifyAnswer = false;
+        this.notifyReply = false;
+        this.notifyLike = false;
+        this.notifyNotice = false;
         this.deleted = true;
         this.deletedAt = Objects.requireNonNull(withdrawnAt, "withdrawnAt must not be null");
     }
@@ -141,6 +196,26 @@ public class User extends BaseEntity {
 
     public boolean isNotificationEnabled() {
         return notificationEnabled;
+    }
+
+    public boolean isNotifyAgreement() {
+        return notifyAgreement;
+    }
+
+    public boolean isNotifyAnswer() {
+        return notifyAnswer;
+    }
+
+    public boolean isNotifyReply() {
+        return notifyReply;
+    }
+
+    public boolean isNotifyLike() {
+        return notifyLike;
+    }
+
+    public boolean isNotifyNotice() {
+        return notifyNotice;
     }
 
     public boolean isDeleted() {
