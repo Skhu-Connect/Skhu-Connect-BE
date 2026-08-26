@@ -79,7 +79,9 @@ public class NotificationEventService {
     }
 
     private void createNoticeOnce(User receiver, String title, String body, String eventKey) {
-        if (!receiver.isNotificationEnabled() || notifications.existsByEventKey(eventKey)) return;
+        if (!receiver.isNotificationEnabled()
+                || !receiver.allows(NOTICE.point())
+                || notifications.existsByEventKey(eventKey)) return;
         try {
             Notification notification = notifications.saveAndFlush(Notification.createNotice(receiver, title, body, eventKey));
             events.publishEvent(FcmPushService.PushMessage.from(notification));
@@ -88,7 +90,9 @@ public class NotificationEventService {
 
     private void createOnce(User receiver, NotificationType type, Petition petition,
                             Comment comment, String eventKey) {
-        if (!receiver.isNotificationEnabled() || notifications.existsByEventKey(eventKey)) return;
+        if (!receiver.isNotificationEnabled()
+                || !receiver.allows(type.point())
+                || notifications.existsByEventKey(eventKey)) return;
         try {
             Notification notification = notifications.saveAndFlush(Notification.create(receiver, type, petition, comment, eventKey));
             events.publishEvent(FcmPushService.PushMessage.from(notification));
