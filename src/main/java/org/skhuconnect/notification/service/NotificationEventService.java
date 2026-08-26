@@ -8,6 +8,7 @@ import org.skhuconnect.notification.fcm.FcmPushService;
 import org.skhuconnect.notification.repository.NotificationRepository;
 import org.skhuconnect.petition.entity.Petition;
 import org.skhuconnect.user.entity.User;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
@@ -17,9 +18,9 @@ import static org.skhuconnect.notification.entity.NotificationType.*;
 public class NotificationEventService {
     private final NotificationRepository notifications;
     private final AgreementRepository agreements;
-    private final FcmPushService fcmPushService;
-    public NotificationEventService(NotificationRepository notifications, AgreementRepository agreements, FcmPushService fcmPushService) {
-        this.notifications = notifications; this.agreements = agreements; this.fcmPushService = fcmPushService;
+    private final ApplicationEventPublisher events;
+    public NotificationEventService(NotificationRepository notifications, AgreementRepository agreements, ApplicationEventPublisher events) {
+        this.notifications = notifications; this.agreements = agreements; this.events = events;
     }
 
     public void onAgreementAdded(Petition petition, int previousCount) {
@@ -81,7 +82,7 @@ public class NotificationEventService {
         if (!receiver.isNotificationEnabled() || notifications.existsByEventKey(eventKey)) return;
         try {
             Notification notification = notifications.saveAndFlush(Notification.createNotice(receiver, title, body, eventKey));
-            try { fcmPushService.send(notification); } catch (RuntimeException ignored) { }
+            events.publishEvent(FcmPushService.PushMessage.from(notification));
         } catch (DataIntegrityViolationException ignored) { }
     }
 
@@ -90,7 +91,7 @@ public class NotificationEventService {
         if (!receiver.isNotificationEnabled() || notifications.existsByEventKey(eventKey)) return;
         try {
             Notification notification = notifications.saveAndFlush(Notification.create(receiver, type, petition, comment, eventKey));
-            try { fcmPushService.send(notification); } catch (RuntimeException ignored) { }
+            events.publishEvent(FcmPushService.PushMessage.from(notification));
         } catch (DataIntegrityViolationException ignored) {
             // Unique event_key is the final guard for concurrent duplicate events.
         }
