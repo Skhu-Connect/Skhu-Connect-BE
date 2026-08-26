@@ -148,6 +148,7 @@ Notification Entity, 조회·읽음 API와 주요 이벤트 연결이 `dev`에 �
 - 자기 자신이 발생시킨 댓글·공감 알림은 생성하지 않는다.
 - `notification_enabled=false`이면 새 알림을 생성하지 않는다.
 - 알림 삭제는 없다.
+- 숨김·삭제된 청원을 가리키는 알림은 목록과 미읽음 개수에서 제외한다. 행 자체는 남기고 조회에서만 거른다. 청원과 무관한 `NOTICE`는 항상 노출한다.
 - 개별·전체 읽음은 멱등이고 `read_at`을 저장한다.
 - 최신순 `createdAt DESC,id DESC`, 미읽음 개수 API 제공
 - 클릭 이동을 위해 nullable `petition_id`, `comment_id` 저장
@@ -161,6 +162,14 @@ GET   /connect/notifications/unread-count
 PATCH /connect/notifications/{notificationId}/read
 PATCH /connect/notifications/read-all
 ```
+
+푸시 발송:
+
+- 알림 저장 트랜잭션에서 `FcmPushService.PushMessage` 이벤트를 발행하고 커밋 이후(`AFTER_COMMIT`) 별도 스레드에서 FCM으로 보낸다. 롤백된 알림은 발송하지 않고 FCM 왕복이 API 응답을 지연시키지 않는다.
+- 이벤트는 트랜잭션 안에서 스냅샷한 값만 담는다. Open Session in View가 비활성이라 커밋 이후에는 Entity의 LAZY 연관을 참조할 수 없다.
+- 수신자의 `fcm_tokens`를 조회해 토큰마다 1건씩 보낸다. `UNREGISTERED`와 `INVALID_ARGUMENT`는 만료 토큰으로 보고 삭제하며 나머지 오류는 오류 코드와 함께 기록만 한다.
+- `FIREBASE_SERVICE_ACCOUNT_JSON`이 없거나 Firebase 초기화에 실패하면 기동 시 경고를 남기고 푸시만 비활성화한다. 알림 저장과 조회는 영향받지 않는다.
+- 토큰 값은 기기 자격증명이므로 로그에 남기지 않고 `tokenId`만 기록한다.
 
 ## 9.1 사용자 정보·활동 조회 정책
 
