@@ -29,6 +29,7 @@ JWT_SECRET
 ```text
 JWT_COOKIE_SECURE (기본 false)
 PORT (기본 8080)
+FIREBASE_SERVICE_ACCOUNT_JSON (미설정 시 FCM 푸시 발송만 비활성화)
 ```
 
 `JWT_SECRET`은 Base64로 인코딩된 256-bit 이상의 HS256 키여야 합니다. 비밀값은 저장소에 기록하지 않습니다.

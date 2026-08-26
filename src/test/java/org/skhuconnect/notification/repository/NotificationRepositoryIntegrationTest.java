@@ -1,6 +1,8 @@
 package org.skhuconnect.notification.repository;
 
 import org.junit.jupiter.api.Test;
+import org.skhuconnect.admin.entity.Admin;
+import org.skhuconnect.admin.repository.AdminRepository;
 import org.skhuconnect.department.entity.Department;
 import org.skhuconnect.department.repository.DepartmentRepository;
 import org.skhuconnect.notification.entity.*;
@@ -29,6 +31,28 @@ class NotificationRepositoryIntegrationTest {
     @Autowired DepartmentRepository departments;
     @Autowired UserRepository users;
     @Autowired PetitionRepository petitions;
+    @Autowired AdminRepository admins;
+
+    @Test void hiddenPetitionDropsItsNotificationsButKeepsNoticeOnes() {
+        String u=UUID.randomUUID().toString().replace("-","");
+        Department department=departments.saveAndFlush(Department.create("H"+u.substring(0,12),"hidden-"+u.substring(0,12)));
+        User user=users.saveAndFlush(User.create(u+"@office.skhu.ac.kr","h"+u.substring(0,12),"encoded",department));
+        Admin admin=admins.saveAndFlush(Admin.create("a"+u.substring(0,12),"encoded"));
+        Petition petition=petitions.saveAndFlush(Petition.create(user, PetitionCategory.FACILITY,
+                "hidden test","content",10, LocalDateTime.now()));
+        notifications.saveAndFlush(Notification.create(user,NotificationType.PETITION_UNDER_REVIEW,
+                petition,null,"hidden:"+u));
+        notifications.saveAndFlush(Notification.createNotice(user,"공지","본문","notice:"+u));
+
+        assertThat(notifications.findVisibleByReceiverId(user.getId(),PageRequest.of(0,20))).hasSize(2);
+        assertThat(notifications.countUnreadVisibleByReceiverId(user.getId())).isEqualTo(2);
+
+        petition.hide("운영 정책 위반",admin,LocalDateTime.now());
+        petitions.saveAndFlush(petition);
+
+        assertThat(notifications.findVisibleByReceiverId(user.getId(),PageRequest.of(0,20))).hasSize(1);
+        assertThat(notifications.countUnreadVisibleByReceiverId(user.getId())).isEqualTo(1);
+    }
 
     @Test void savesListsCountsAndRejectsDuplicateEventKey() {
         String u=UUID.randomUUID().toString().replace("-","");
@@ -39,8 +63,8 @@ class NotificationRepositoryIntegrationTest {
         notifications.saveAndFlush(Notification.create(user,NotificationType.PETITION_UNDER_REVIEW,
                 petition,null,"event:"+u));
 
-        assertThat(notifications.countByReceiverIdAndReadFalse(user.getId())).isEqualTo(1);
-        assertThat(notifications.findByReceiverId(user.getId(),PageRequest.of(0,20))).hasSize(1);
+        assertThat(notifications.countUnreadVisibleByReceiverId(user.getId())).isEqualTo(1);
+        assertThat(notifications.findVisibleByReceiverId(user.getId(),PageRequest.of(0,20))).hasSize(1);
         assertThatThrownBy(()->notifications.saveAndFlush(Notification.create(user,
                 NotificationType.PETITION_UNDER_REVIEW,petition,null,"event:"+u)))
                 .isInstanceOf(DataIntegrityViolationException.class);

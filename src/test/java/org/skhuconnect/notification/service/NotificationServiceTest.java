@@ -18,8 +18,8 @@ class NotificationServiceTest {
         service=new NotificationService(repository, Clock.fixed(Instant.parse("2026-08-06T03:00:00Z"), ZoneId.of("Asia/Seoul")));
     }
     @Test void listsNewestAndCountsUnread() {
-        when(repository.findByReceiverId(eq(1L), any())).thenReturn(new PageImpl<>(List.of()));
-        when(repository.countByReceiverIdAndReadFalse(1L)).thenReturn(3L);
+        when(repository.findVisibleByReceiverId(eq(1L), any())).thenReturn(new PageImpl<>(List.of()));
+        when(repository.countUnreadVisibleByReceiverId(1L)).thenReturn(3L);
         assertThat(service.findAll(1L,0,20).content()).isEmpty();
         assertThat(service.unreadCount(1L).unreadCount()).isEqualTo(3);
     }

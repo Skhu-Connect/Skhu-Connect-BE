@@ -23,13 +23,13 @@ public class NotificationService {
     @Transactional(readOnly = true)
     public NotificationPageResponse findAll(Long userId, int page, int size) {
         if (page < 0 || size < 1 || size > MAX_SIZE) throw new IllegalArgumentException("invalid page");
-        return NotificationPageResponse.from(repository.findByReceiverId(userId,
+        return NotificationPageResponse.from(repository.findVisibleByReceiverId(userId,
                 PageRequest.of(page, size, Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"))))
                 .map(NotificationResponse::from));
     }
     @Transactional(readOnly = true)
     public UnreadNotificationCountResponse unreadCount(Long userId) {
-        return new UnreadNotificationCountResponse(repository.countByReceiverIdAndReadFalse(userId));
+        return new UnreadNotificationCountResponse(repository.countUnreadVisibleByReceiverId(userId));
     }
     @Transactional
     public NotificationResponse markRead(Long userId, Long id) {
