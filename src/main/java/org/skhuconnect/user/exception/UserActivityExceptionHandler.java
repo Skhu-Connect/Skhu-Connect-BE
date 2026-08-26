@@ -11,10 +11,12 @@ public class UserActivityExceptionHandler {
 
     @ExceptionHandler(UserActivityException.class)
     ProblemDetail handle(UserActivityException exception) {
-        HttpStatus status =
-                exception.getReason() == UserActivityException.Reason.USER_NOT_FOUND
-                        ? HttpStatus.NOT_FOUND
-                        : HttpStatus.BAD_REQUEST;
+        HttpStatus status = switch (exception.getReason()) {
+            case USER_NOT_FOUND -> HttpStatus.NOT_FOUND;
+            case CURRENT_PASSWORD_MISMATCH -> HttpStatus.UNAUTHORIZED;
+            case LOGIN_ID_ALREADY_EXISTS -> HttpStatus.CONFLICT;
+            default -> HttpStatus.BAD_REQUEST;
+        };
         ProblemDetail detail = ProblemDetail.forStatus(status);
         detail.setTitle(exception.getMessage());
         return detail;

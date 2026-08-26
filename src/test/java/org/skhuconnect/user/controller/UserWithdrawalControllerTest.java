@@ -26,7 +26,8 @@ class UserWithdrawalControllerTest {
     void setUp() {
         service = mock(UserWithdrawalService.class);
         mockMvc = standaloneSetup(new UserActivityController(
-                mock(UserActivityService.class), service))
+                mock(UserActivityService.class), service,
+                mock(org.skhuconnect.user.service.UserAccountService.class)))
                 .setControllerAdvice(new UserActivityExceptionHandler())
                 .build();
     }

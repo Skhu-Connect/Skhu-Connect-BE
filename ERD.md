@@ -238,7 +238,7 @@ email_verifications
 |---|---|---:|---|---|
 | id | BIGINT | 불가 | PK, AUTO_INCREMENT | 이메일 인증 식별자 |
 | email | VARCHAR(255) | 불가 | 복합 UNIQUE | 정규화된 성공회대 공식 이메일 |
-| purpose | VARCHAR(30) | 불가 | 복합 UNIQUE | SIGN_UP 또는 PASSWORD_RESET |
+| purpose | VARCHAR(30) | 불가 | 복합 UNIQUE | SIGN_UP, PASSWORD_RESET 또는 LOGIN_ID_FIND |
 | code_hash | VARCHAR(64) | 불가 |  | salt를 포함해 계산한 SHA-256 해시 |
 | code_salt | VARCHAR(64) | 불가 |  | 인증 레코드별 random salt |
 | code_expires_at | DATETIME(6) | 불가 |  | 인증번호 만료 시각 |
@@ -273,7 +273,7 @@ UNIQUE INDEX ux_email_verifications_token_hash (token_hash)
 - 인증번호 원문은 저장하지 않고 record별 salt를 포함한 SHA-256 해시만 저장한다.
 - 인증 성공 시 30분간 유효한 일회용 verificationToken을 발급한다.
 - verificationToken 원문은 저장하지 않고 SHA-256 해시만 저장한다.
-- 목적은 SIGN_UP과 PASSWORD_RESET으로 구분하며 다른 목적에 재사용할 수 없다.
+- 목적은 SIGN_UP, PASSWORD_RESET, LOGIN_ID_FIND로 구분하며 다른 목적에 재사용할 수 없다.
 - 사용된 token과 만료된 인증번호 또는 token은 재사용할 수 없다.
 - 이메일 인증 저장에 Redis를 사용하지 않는다.
 
@@ -1230,7 +1230,7 @@ POST /connect/auth/email-verifications/confirm
 - 인증 실패는 최대 5회이며 재전송 시 기존 인증 상태를 갱신한다.
 - 인증 성공 시 30분간 유효한 일회용 verificationToken을 발급한다.
 - verificationToken 원문 대신 SHA-256 tokenHash를 저장한다.
-- SIGN_UP과 PASSWORD_RESET 목적을 구분한다.
+- SIGN_UP, PASSWORD_RESET, LOGIN_ID_FIND 목적을 구분한다.
 - Redis는 사용하지 않는다.
 
 실제 SMTP 제공자는 아직 확정되지 않았다.

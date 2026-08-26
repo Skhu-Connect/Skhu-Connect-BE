@@ -122,6 +122,10 @@ public class User extends BaseEntity {
         );
     }
 
+    public void changeLoginId(String loginId) {
+        this.loginId = Objects.requireNonNull(loginId, "loginId must not be null");
+    }
+
     public void changeDepartment(Department department) {
         this.department = Objects.requireNonNull(department, "department must not be null");
     }
