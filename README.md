@@ -55,6 +55,7 @@ FIREBASE_SERVICE_ACCOUNT_JSON (미설정 시 FCM 푸시 발송만 비활성화)
 | 이메일 인증 발송·확인 | `POST /connect/auth/email-verifications`, `/confirm` | 불필요 | 204, 200 |
 | 회원가입 | `POST /connect/auth/signup` | 불필요 | 201 |
 | 로그인·재발급·로그아웃 | `POST /connect/auth/login`, `/token/refresh`, `/logout` | Refresh는 Cookie | 200, 204 |
+| 아이디 찾기 | `POST /connect/auth/login-id/find/email`, `/password` | 불필요 | 200 |
 | 비밀번호 재설정 | `POST /connect/auth/password/reset` | 인증 토큰 | 204 |
 | 학과 목록 | `GET /connect/departments` | 불필요 | 200 |
 | 청원 등록·목록·상세·수정·삭제 | `/connect/petitions` | 목록·상세만 공개 | 200, 201, 204 |
@@ -63,6 +64,7 @@ FIREBASE_SERVICE_ACCOUNT_JSON (미설정 시 FCM 푸시 발송만 비활성화)
 | 댓글·대댓글·공감 | `/connect/petitions/{petitionId}/comments/**` | 목록만 공개 | 200, 201, 204 |
 | 알림 목록·미읽음·읽음 처리 | `/connect/notifications/**` | 필요 | 200, 204 |
 | 내 정보·활동 내역·알림 설정 | `/connect/users/me/**` | 필요 | 200 |
+| 내 아이디·비밀번호 변경 | `PATCH /connect/users/me/login-id`, `/password` | 필요 | 200, 204 |
 | 사용자 영구 차단 | `POST /connect/users/me/blocks` | 필요 | 201 |
 
 공통 오류 응답은 Problem Detail 형식이다. 요청 검증 실패는 400, Access Token 누락·위조·만료·잘못된 role은 401, 작성자 권한 위반은 403, 존재하지 않거나 사용자에게 노출할 수 없는 데이터는 404, 중복 참여 또는 허용되지 않는 상태 충돌은 409를 사용한다. 인증 도메인의 만료 상태는 해당 Controller의 Swagger 명세를 따른다.
@@ -89,7 +91,9 @@ org.skhuconnect
 
 - 학교 이메일 인증, 회원가입, BCrypt 비밀번호 저장
 - JWT Access Token, Refresh Token 회전·재발급·로그아웃
+- 이메일 인증 또는 현재 비밀번호를 이용한 아이디 찾기
 - 비밀번호 재설정
+- 로그인 상태의 아이디·비밀번호 변경
 - 청원 CRUD·검색·상세·논리 삭제 및 OPEN/EXPIRED 유효 상태 계산
 - 동의·취소, 중복 방지, 임계치 달성 시 `UNDER_REVIEW` 전환
 - 북마크 등록·취소·내 목록

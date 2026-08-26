@@ -15,7 +15,11 @@ import org.skhuconnect.user.dto.UserCommentPageResponse;
 import org.skhuconnect.user.dto.UserMeResponse;
 import org.skhuconnect.user.dto.NotificationSettingsResponse;
 import org.skhuconnect.user.dto.NotificationSettingsUpdateRequest;
+import org.skhuconnect.auth.loginid.dto.LoginIdResponse;
+import org.skhuconnect.user.dto.LoginIdUpdateRequest;
+import org.skhuconnect.user.dto.PasswordChangeRequest;
 import org.skhuconnect.user.service.UserActivityService;
+import org.skhuconnect.user.service.UserAccountService;
 import org.skhuconnect.user.dto.UserWithdrawalRequest;
 import org.skhuconnect.user.service.UserWithdrawalService;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -35,11 +39,16 @@ public class UserActivityController {
 
     private final UserActivityService service;
     private final UserWithdrawalService withdrawalService;
+    private final UserAccountService accountService;
 
     public UserActivityController(
-            UserActivityService service, UserWithdrawalService withdrawalService) {
+            UserActivityService service,
+            UserWithdrawalService withdrawalService,
+            UserAccountService accountService
+    ) {
         this.service = service;
         this.withdrawalService = withdrawalService;
+        this.accountService = accountService;
     }
 
     @Operation(
@@ -88,6 +97,54 @@ public class UserActivityController {
             @RequestBody NotificationSettingsUpdateRequest request
     ) {
         return service.updateNotificationSettings(userId, request);
+    }
+
+    @Operation(
+            summary = "로그인 아이디 변경",
+            description = "현재 비밀번호를 확인한 뒤 로그인 아이디를 변경합니다. 기존 로그인 세션과 토큰은 유지됩니다."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "아이디 변경 성공",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = LoginIdResponse.class))),
+            @ApiResponse(responseCode = "400", description = "요청 형식 오류 또는 현재 아이디와 동일", content = @Content),
+            @ApiResponse(responseCode = "401", description = "Access Token 오류 또는 현재 비밀번호 불일치", content = @Content),
+            @ApiResponse(responseCode = "404", description = "사용자 없음", content = @Content),
+            @ApiResponse(responseCode = "409", description = "이미 사용 중인 아이디", content = @Content)
+    })
+    @PatchMapping("/login-id")
+    public LoginIdResponse changeLoginId(
+            @Parameter(hidden = true) @RequestAttribute("userId") Long userId,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    required = true,
+                    content = @Content(examples = @ExampleObject(
+                            value = "{\"newLoginId\":\"new-login-id\",\"password\":\"current-password\"}")))
+            @Valid @RequestBody LoginIdUpdateRequest request
+    ) {
+        return accountService.changeLoginId(userId, request);
+    }
+
+    @Operation(
+            summary = "로그인 상태 비밀번호 변경",
+            description = "현재 비밀번호를 확인하고 새 비밀번호를 저장합니다. 기존 로그인 세션과 토큰은 유지됩니다."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "비밀번호 변경 성공"),
+            @ApiResponse(responseCode = "400", description = "요청 형식 오류 또는 기존 비밀번호와 동일", content = @Content),
+            @ApiResponse(responseCode = "401", description = "Access Token 오류 또는 현재 비밀번호 불일치", content = @Content),
+            @ApiResponse(responseCode = "404", description = "사용자 없음", content = @Content)
+    })
+    @PatchMapping("/password")
+    public ResponseEntity<Void> changePassword(
+            @Parameter(hidden = true) @RequestAttribute("userId") Long userId,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    required = true,
+                    content = @Content(examples = @ExampleObject(
+                            value = "{\"currentPassword\":\"current-password\",\"newPassword\":\"new-password\"}")))
+            @Valid @RequestBody PasswordChangeRequest request
+    ) {
+        accountService.changePassword(userId, request);
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(

@@ -12,6 +12,7 @@ SKHU Connect는 성공회대학교 학생 청원 플랫폼이다. 학생은 학�
 - 공통 JPA·환경변수·Swagger
 - Department 목록
 - User, 이메일 인증, 회원가입, 로그인, JWT 재발급·로그아웃, 비밀번호 재설정
+- 이메일 인증·현재 비밀번호 기반 아이디 찾기와 로그인 상태의 아이디·비밀번호 변경
 - ThresholdSetting 기본 도메인
 - Petition CRUD·목록·검색·상세
 - Agreement 등록·취소와 상태 전환
@@ -50,7 +51,7 @@ Controller는 HTTP만 처리하고 Service가 정책·트랜잭션을 담당한�
 ## 3. 인증 정책
 
 - 학교 이메일: `@office.skhu.ac.kr`
-- 이메일 인증 목적: `SIGNUP`, `PASSWORD_RESET`
+- 이메일 인증 목적: `SIGN_UP`, `PASSWORD_RESET`, `LOGIN_ID_FIND`
 - 인증번호: 숫자 6자리, 5분, 최대 5회 실패, 60초 재전송 제한
 - 인증번호 원문은 저장하지 않고 salt 포함 SHA-256 해시를 저장한다.
 - 인증 성공 verificationToken은 30분, 1회 사용한다.
@@ -60,6 +61,8 @@ Controller는 HTTP만 처리하고 Service가 정책·트랜잭션을 담당한�
 - Refresh Token은 `refreshToken` HttpOnly, SameSite=Lax, Path=/connect/auth Cookie다.
 - 로그인·재발급 시 Refresh Token을 회전하고 로그아웃 시 삭제한다.
 - 인증 사용자 ID를 요청 본문으로 받지 않는다.
+- 아이디 찾기용 인증은 가입된 이메일에만 발송하고 `LOGIN_ID_FIND` 토큰을 한 번만 소비한다.
+- 로그인 상태의 아이디·비밀번호 변경은 사용자 행을 잠그고 현재 비밀번호를 재확인한다. 기존 Access Token, Refresh Token, FCM Token은 유지한다.
 - 공개 API: 학과, 청원 목록·상세, 댓글 목록. 댓글 목록은 토큰이 없을 때만 익명 통과하며 잘못된 토큰은 401이다.
 - 청원 변경, 동의, 북마크, 댓글 변경·공감, 알림 API는 Access Token 필수다.
 

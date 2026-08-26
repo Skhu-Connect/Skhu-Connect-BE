@@ -100,11 +100,13 @@ class UserTest {
         );
 
         user.changePassword("changed-encoded-password");
+        user.changeLoginId("changed-login-id");
         user.changeDepartment(changedDepartment);
         user.changeNotificationEnabled(false);
         user.changeNotificationSettings(null, null, null, false, null);
 
         assertThat(user.getPassword()).isEqualTo("changed-encoded-password");
+        assertThat(user.getLoginId()).isEqualTo("changed-login-id");
         assertThat(user.getDepartment()).isSameAs(changedDepartment);
         assertThat(user.isNotificationEnabled()).isFalse();
         assertThat(user.allows(NotificationPoint.AGREEMENT)).isTrue();
@@ -155,6 +157,7 @@ class UserTest {
         );
 
         assertThatNullPointerException().isThrownBy(() -> user.changePassword(null));
+        assertThatNullPointerException().isThrownBy(() -> user.changeLoginId(null));
         assertThatNullPointerException().isThrownBy(() -> user.changeDepartment(null));
     }
 

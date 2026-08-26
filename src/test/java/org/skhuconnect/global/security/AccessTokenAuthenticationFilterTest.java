@@ -280,7 +280,9 @@ class AccessTokenAuthenticationFilterTest {
     void userPatchApisRequireToken() throws Exception {
         for (String path : List.of(
                 "/connect/users/me/department",
-                "/connect/users/me/notification-settings")) {
+                "/connect/users/me/notification-settings",
+                "/connect/users/me/login-id",
+                "/connect/users/me/password")) {
             MockHttpServletRequest request = new MockHttpServletRequest("PATCH", path);
             MockHttpServletResponse response = new MockHttpServletResponse();
 
