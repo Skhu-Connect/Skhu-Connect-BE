@@ -151,7 +151,7 @@ class PetitionServiceTest {
     @Test
     void updateChangesTitleAndContentForWriter() {
         Petition petition = petition(mockUser(1L));
-        when(petitionRepository.findByIdAndDeletedFalse(10L))
+        when(petitionRepository.findByIdAndDeletedFalseForUpdate(10L))
                 .thenReturn(Optional.of(petition));
 
         PetitionResponse response = service.update(
@@ -164,7 +164,7 @@ class PetitionServiceTest {
     @Test
     void updateRejectsDifferentUser() {
         Petition petition = petition(mockUser(2L));
-        when(petitionRepository.findByIdAndDeletedFalse(10L))
+        when(petitionRepository.findByIdAndDeletedFalseForUpdate(10L))
                 .thenReturn(Optional.of(petition));
 
         assertThatThrownBy(() -> service.update(
@@ -177,7 +177,7 @@ class PetitionServiceTest {
     @Test
     void deleteSoftDeletesPetition() {
         Petition petition = petition(mockUser(1L));
-        when(petitionRepository.findByIdAndDeletedFalse(10L))
+        when(petitionRepository.findByIdAndDeletedFalseForUpdate(10L))
                 .thenReturn(Optional.of(petition));
 
         service.delete(1L, 10L);
@@ -189,7 +189,7 @@ class PetitionServiceTest {
 
     @Test
     void missingOrDeletedPetitionIsNotFound() {
-        when(petitionRepository.findByIdAndDeletedFalse(10L))
+        when(petitionRepository.findByIdAndDeletedFalseForUpdate(10L))
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.delete(1L, 10L))
@@ -239,7 +239,7 @@ class PetitionServiceTest {
     @Test
     void softDeletedPetitionCannotBeUpdatedOrDeletedAgain() {
         Petition petition = petition(mockUser(1L));
-        when(petitionRepository.findByIdAndDeletedFalse(10L))
+        when(petitionRepository.findByIdAndDeletedFalseForUpdate(10L))
                 .thenReturn(Optional.of(petition));
         service.delete(1L, 10L);
 
@@ -330,7 +330,7 @@ class PetitionServiceTest {
     }
 
     private void assertUpdateAndDeleteNotEditable(Petition petition) {
-        when(petitionRepository.findByIdAndDeletedFalse(10L))
+        when(petitionRepository.findByIdAndDeletedFalseForUpdate(10L))
                 .thenReturn(Optional.of(petition));
 
         assertUpdateNotEditable();

@@ -177,7 +177,7 @@ public class PetitionService {
     }
 
     private Petition findPetition(Long petitionId) {
-        return petitionRepository.findByIdAndDeletedFalse(petitionId)
+        return petitionRepository.findByIdAndDeletedFalseForUpdate(petitionId)
                 .orElseThrow(() -> new PetitionException(Reason.PETITION_NOT_FOUND));
     }
 
