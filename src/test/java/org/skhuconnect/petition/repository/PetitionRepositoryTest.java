@@ -65,6 +65,30 @@ class PetitionRepositoryTest {
     }
 
     @Test
+    void forUpdateFinderKeepsHiddenPetitionButExcludesDeleted() {
+        User writer = saveWriter();
+        Petition petition = petitionRepository.saveAndFlush(Petition.create(
+                writer,
+                PetitionCategory.FACILITY,
+                "잠금 조회 대상",
+                "수정·삭제는 잠금 조회로 청원을 읽는다.",
+                10,
+                LocalDateTime.of(2026, 8, 5, 12, 0)
+        ));
+
+        // 숨김 청원은 404 가 아니라 409(수정 불가)로 답해야 하므로 조회에서 걸러내지 않는다.
+        ReflectionTestUtils.setField(petition, "hidden", true);
+        petitionRepository.flush();
+        assertThat(petitionRepository.findByIdAndDeletedFalseForUpdate(petition.getId()))
+                .isPresent();
+
+        ReflectionTestUtils.setField(petition, "deleted", true);
+        petitionRepository.flush();
+        assertThat(petitionRepository.findByIdAndDeletedFalseForUpdate(petition.getId()))
+                .isEmpty();
+    }
+
+    @Test
     void latestCreatedAtIncludesSoftDeletedPetition() {
         User writer = saveWriter();
         Petition petition = petitionRepository.saveAndFlush(Petition.create(
