@@ -97,8 +97,8 @@ class PetitionServiceTest {
 
         assertThatThrownBy(() -> service.create(1L, createRequest()))
                 .isInstanceOf(PetitionException.class)
-                .extracting("reason")
-                .isEqualTo(PetitionException.Reason.PETITION_CREATE_COOLDOWN);
+                .extracting("reason", "retryAfterSeconds")
+                .containsExactly(PetitionException.Reason.PETITION_CREATE_COOLDOWN, 1L);
         org.mockito.Mockito.verify(petitionRepository, org.mockito.Mockito.never())
                 .save(any());
         org.mockito.Mockito.verify(thresholdSettingRepository, org.mockito.Mockito.never())

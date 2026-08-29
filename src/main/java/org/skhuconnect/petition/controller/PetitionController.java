@@ -51,7 +51,8 @@ public class PetitionController {
             @ApiResponse(responseCode = "400", description = "요청 형식 오류", content = @Content),
             @ApiResponse(responseCode = "404", description = "사용자 또는 임계치 설정 없음",
                     content = @Content),
-            @ApiResponse(responseCode = "429", description = "청원 등록 후 10분이 지나지 않음",
+            @ApiResponse(responseCode = "429",
+                    description = "청원 등록 후 10분이 지나지 않음. 남은 시간은 retryAfterSeconds(초)로 내려간다.",
                     content = @Content)
     })
     @PostMapping
