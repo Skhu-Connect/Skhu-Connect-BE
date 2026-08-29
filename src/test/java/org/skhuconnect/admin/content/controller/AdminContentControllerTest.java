@@ -56,6 +56,17 @@ class AdminContentControllerTest {
     }
 
     @Test
+    void restoresPetition() throws Exception {
+        // @PathVariable Long id 가 URL 템플릿의 {petitionId} 와 이름이 안 맞아 런타임에
+        // MissingPathVariableException 으로 500 이 나던 자리 - 경로 바인딩을 실제로 태워서 잡는다.
+        when(service.restorePetition(7L, 10L)).thenReturn(petition());
+
+        mockMvc.perform(patch("/connect/admin/petitions/10/restore").requestAttr("adminId", 7L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(10));
+    }
+
+    @Test
     void listsAndRestoresCommentOrReply() throws Exception {
         when(service.findComments(10L, 0, 20)).thenReturn(new AdminPageResponse<>(
                 List.of(comment()), 0, 20, 1, 1, true, true));
