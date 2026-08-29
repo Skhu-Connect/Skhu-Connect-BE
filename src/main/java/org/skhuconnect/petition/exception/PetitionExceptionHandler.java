@@ -30,6 +30,10 @@ public class PetitionExceptionHandler {
             case INVALID_SORT -> "Invalid petition sort property";
             case INVALID_PAGE -> "Invalid petition page request";
         });
+        // 쿨다운 429 에만 실린다 - 화면이 "N분 M초 후에 가능"을 계산 없이 그대로 쓴다.
+        if (exception.getRetryAfterSeconds() != null) {
+            detail.setProperty("retryAfterSeconds", exception.getRetryAfterSeconds());
+        }
         return detail;
     }
 }

@@ -66,9 +66,14 @@ public class PetitionService {
                 .orElseThrow(() -> new PetitionException(Reason.USER_NOT_FOUND));
         LocalDateTime now = LocalDateTime.now(clock);
         petitionRepository.findLatestCreatedAtByWriterId(userId)
-                .filter(createdAt -> now.isBefore(createdAt.plus(CREATE_COOLDOWN)))
-                .ifPresent(createdAt -> {
-                    throw new PetitionException(Reason.PETITION_CREATE_COOLDOWN);
+                .map(createdAt -> createdAt.plus(CREATE_COOLDOWN))
+                .filter(now::isBefore)
+                .ifPresent(retryAt -> {
+                    // 남은 시간은 올림한다 - 내림하면 마지막 1초가 "0초 후 가능"으로 표시된다.
+                    long retryAfterSeconds = Duration.between(now, retryAt)
+                            .plusSeconds(1).minusNanos(1).toSeconds();
+                    throw new PetitionException(
+                            Reason.PETITION_CREATE_COOLDOWN, retryAfterSeconds);
                 });
         ThresholdSetting setting = thresholdSettingRepository
                 .findByCategory(request.category())
@@ -177,7 +182,7 @@ public class PetitionService {
     }
 
     private Petition findPetition(Long petitionId) {
-        return petitionRepository.findByIdAndDeletedFalse(petitionId)
+        return petitionRepository.findByIdAndDeletedFalseForUpdate(petitionId)
                 .orElseThrow(() -> new PetitionException(Reason.PETITION_NOT_FOUND));
     }
 
