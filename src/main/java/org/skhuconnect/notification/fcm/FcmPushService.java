@@ -108,7 +108,7 @@ public class FcmPushService {
                     notification.getReceiver().getId(),
                     notification.getTitle() != null ? notification.getTitle() : "SKHU Connect",
                     notification.getBody() != null ? notification.getBody()
-                            : NotificationResponse.message(notification.getType()),
+                            : NotificationResponse.message(notification),
                     notification.getId(),
                     notification.getPetition() == null ? null : notification.getPetition().getId());
         }

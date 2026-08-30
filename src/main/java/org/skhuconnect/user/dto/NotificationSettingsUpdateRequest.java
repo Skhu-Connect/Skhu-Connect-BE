@@ -13,7 +13,9 @@ public record NotificationSettingsUpdateRequest(
         @Schema(description = "댓글·답글 공감 알림 수신 여부", example = "false", nullable = true)
         Boolean like,
         @Schema(description = "공지사항 알림 수신 여부", example = "true", nullable = true)
-        Boolean notice
+        Boolean notice,
+        @Schema(description = "신고 처리 결과·조치 알림 수신 여부", example = "true", nullable = true)
+        Boolean report
 ) {
     @Schema(hidden = true)
     public boolean isEmpty() {
@@ -21,6 +23,7 @@ public record NotificationSettingsUpdateRequest(
                 && answer == null
                 && reply == null
                 && like == null
-                && notice == null;
+                && notice == null
+                && report == null;
     }
 }
