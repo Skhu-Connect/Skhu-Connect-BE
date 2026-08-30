@@ -14,7 +14,9 @@ public record NotificationSettingsResponse(
         @Schema(description = "댓글·답글 공감 알림 수신 여부", example = "false")
         boolean like,
         @Schema(description = "공지사항 알림 수신 여부", example = "true")
-        boolean notice
+        boolean notice,
+        @Schema(description = "신고 처리 결과·조치 알림 수신 여부", example = "true")
+        boolean report
 ) {
     public static NotificationSettingsResponse from(User user) {
         return new NotificationSettingsResponse(
@@ -22,7 +24,8 @@ public record NotificationSettingsResponse(
                 user.isNotifyAnswer(),
                 user.isNotifyReply(),
                 user.isNotifyLike(),
-                user.isNotifyNotice()
+                user.isNotifyNotice(),
+                user.isNotifyReport()
         );
     }
 }

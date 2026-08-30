@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import org.skhuconnect.comment.entity.Comment;
 import org.skhuconnect.petition.entity.Petition;
 import org.skhuconnect.report.entity.Report;
+import org.skhuconnect.report.entity.ReportActionType;
 import org.skhuconnect.report.entity.ReportReasonType;
 import org.skhuconnect.report.entity.ReportStatus;
 import org.skhuconnect.report.entity.ReportTargetType;
@@ -16,6 +17,8 @@ public record ReportResponse(
         Long id,
         ReportStatus status,
         ReportTargetType targetType,
+        @Schema(description = "조치 종류. status가 ACTION_TAKEN일 때만 채워진다(HIDE: 대상 숨김, USER_LOGIN_BAN: 작성자 로그인 정지)")
+        ReportActionType actionType,
         @Schema(description = "신고 대상 청원 id. 댓글 신고면 그 댓글이 달린 청원 id")
         Long petitionId,
         @Schema(description = "댓글 신고일 때만 채워진다")
@@ -60,6 +63,7 @@ public record ReportResponse(
                 report.getId(),
                 report.getStatus(),
                 report.getTargetType(),
+                report.getActionType(),
                 petitionId,
                 comment == null ? null : comment.getId(),
                 report.getReasonType(),

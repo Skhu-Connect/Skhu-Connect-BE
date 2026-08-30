@@ -79,9 +79,11 @@ public class ReportController {
 
     @Operation(
             summary = "신고 처리",
-            description = "관리자 전용입니다. ACTION_TAKEN 이면 대상을 숨김 처리합니다. "
-                    + "다만 작성자가 이미 삭제한 대상은 숨기지 않고 신고만 종결합니다 - "
+            description = "관리자 전용입니다. ACTION_TAKEN 이면 actionType 이 필수입니다 - "
+                    + "HIDE 는 대상을 숨김 처리하고, USER_LOGIN_BAN 은 대상 작성자의 로그인을 정지합니다. "
+                    + "HIDE 라도 작성자가 이미 삭제한 대상은 숨기지 않고 신고만 종결합니다 - "
                     + "삭제된 글은 이미 노출이 끊겨 있기 때문입니다. "
+                    + "처리 결과는 신고자에게, ACTION_TAKEN 이면 대상 작성자에게도 알림이 갑니다. "
                     + "PENDING 상태인 신고만 처리할 수 있습니다."
     )
     @ApiResponses({

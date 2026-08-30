@@ -8,7 +8,11 @@ public enum NotificationType {
     COMMENT_REPLY(NotificationPoint.REPLY),
     COMMENT_LIKE(NotificationPoint.LIKE),
     REPLY_LIKE(NotificationPoint.LIKE),
-    NOTICE(NotificationPoint.NOTICE);
+    NOTICE(NotificationPoint.NOTICE),
+    REPORT_DISMISSED(NotificationPoint.REPORT),
+    REPORT_ACTION_TAKEN(NotificationPoint.REPORT),
+    CONTENT_HIDDEN(NotificationPoint.REPORT),
+    ACCOUNT_LOGIN_BANNED(NotificationPoint.REPORT);
 
     private final NotificationPoint point;
 

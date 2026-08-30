@@ -95,7 +95,7 @@ public class AccessTokenAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
             request.setAttribute(adminRequest ? ADMIN_ID_ATTRIBUTE : USER_ID_ATTRIBUTE, subjectId);
-            if (!adminRequest && !userRepository.existsByIdAndDeletedFalse(subjectId)) {
+            if (!adminRequest && !userRepository.existsByIdAndDeletedFalseAndLoginBannedFalse(subjectId)) {
                 unauthorized(response);
                 return;
             }

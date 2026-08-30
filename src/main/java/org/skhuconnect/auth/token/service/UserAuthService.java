@@ -52,6 +52,11 @@ public class UserAuthService {
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw error(Reason.INVALID_CREDENTIALS);
         }
+        if (user.isLoginBanned()) {
+            // Ban status is only revealed after the password already proved account
+            // ownership, so this never helps an outsider enumerate banned accounts.
+            throw new UserAuthException(Reason.ACCOUNT_BANNED, user.getLoginBanReason());
+        }
 
         String rawRefreshToken = opaqueTokenService.generate();
         String tokenHash = opaqueTokenService.hash(rawRefreshToken);
@@ -74,6 +79,9 @@ public class UserAuthService {
                 .orElseThrow(() -> error(Reason.TOKEN_INVALID));
         if (refreshToken.getUser().isDeleted()) {
             throw error(Reason.TOKEN_INVALID);
+        }
+        if (refreshToken.getUser().isLoginBanned()) {
+            throw new UserAuthException(Reason.ACCOUNT_BANNED, refreshToken.getUser().getLoginBanReason());
         }
         LocalDateTime now = LocalDateTime.now(clock);
         if (refreshToken.isExpiredAt(now)) {
