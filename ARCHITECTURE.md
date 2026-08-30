@@ -146,15 +146,20 @@ Notification Entity, 조회·읽음 API와 주요 이벤트 연결이 `dev`에 �
 - `COMMENT_REPLY`: 원댓글 작성자
 - `COMMENT_LIKE`: 원댓글 작성자
 - `REPLY_LIKE`: 대댓글 작성자
+- `REPORT_DISMISSED`: 신고자 (신고가 기각됐을 때)
+- `REPORT_ACTION_TAKEN`: 신고자 (신고가 조치됐을 때, HIDE/USER_LOGIN_BAN 공통)
+- `CONTENT_HIDDEN`: 신고 대상 청원·댓글 작성자 (조치 종류가 HIDE일 때만)
+- `ACCOUNT_LOGIN_BANNED`: 신고 대상 작성자 (조치 종류가 USER_LOGIN_BAN일 때만)
 
 공통 규칙:
 
 - 동일 이벤트·수신자는 최초 1회만 생성하고 `event_key` UNIQUE로 동시 중복도 막는다.
 - 자기 자신이 발생시킨 댓글·공감 알림은 생성하지 않는다.
 - `notification_enabled=false`이면 새 알림을 생성하지 않는다.
-- 알림 종류는 `AGREEMENT`, `ANSWER`, `REPLY`, `LIKE`, `NOTICE` 포인트로 매핑하며, 사용자가 끈 포인트의 알림은 DB에 생성하지 않는다.
+- 알림 종류는 `AGREEMENT`, `ANSWER`, `REPLY`, `LIKE`, `NOTICE`, `REPORT` 포인트로 매핑하며, 사용자가 끈 포인트의 알림은 DB에 생성하지 않는다. `REPORT`는 신고 처리 결과 4종을 전부 묶는다 - 신고자용·피신고자용을 따로 끄고 켤 수 없다.
 - 알림 삭제는 없다.
-- 숨김·삭제된 청원을 가리키는 알림은 목록과 미읽음 개수에서 제외한다. 행 자체는 남기고 조회에서만 거른다. 청원과 무관한 `NOTICE`는 항상 노출한다.
+- 숨김·삭제된 청원을 가리키는 알림은 목록과 미읽음 개수에서 제외한다. 행 자체는 남기고 조회에서만 거른다. 청원과 무관한 `NOTICE`는 항상 노출한다. **`CONTENT_HIDDEN`·`ACCOUNT_LOGIN_BANNED`는 예외다** - 그 청원이 숨겨졌다는 사실 자체를 알리는 알림이라, 청원이 숨겨졌다고 알림까지 숨기면 안 된다(2026-08-30, 이 예외가 없어서 알림이 안 보이던 버그를 고쳤다).
+- `Notification.type` 컬럼은 DB에 enum CHECK 제약을 두지 않는다 - `ddl-auto=update`가 기존 CHECK를 안 갱신해서 나중에 알림 종류를 추가할 때마다 전체 알림 발송이 500으로 끊기는 장애가 났다(ERD.md 26절 참고). 앞으로 `NotificationType`에 값을 추가할 땐 이 문제가 재발하지 않는다 - 다만 다른 enum 컬럼(`ReportStatus` 등)에 값을 추가할 땐 ERD.md 26절의 확인 절차를 따른다.
 - 개별·전체 읽음은 멱등이고 `read_at`을 저장한다.
 - 최신순 `createdAt DESC,id DESC`, 미읽음 개수 API 제공
 - 클릭 이동을 위해 nullable `petition_id`, `comment_id` 저장
