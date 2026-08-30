@@ -27,13 +27,18 @@ public class AgreementController {
         this.agreementService = agreementService;
     }
 
-    @Operation(summary = "청원 동의")
+    @Operation(
+            summary = "청원 동의",
+            description = "작성자는 자기 청원에 동의할 수 없습니다(409). 이 제한을 넣기 전에 이미 "
+                    + "생긴 자기 동의는 남아 있으며, 동의 취소(DELETE)는 계속 허용됩니다."
+    )
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "청원 동의 성공"),
             @ApiResponse(responseCode = "401", description = "로그인 필요", content = @Content),
             @ApiResponse(responseCode = "404", description = "사용자 또는 청원 없음",
                     content = @Content),
-            @ApiResponse(responseCode = "409", description = "동의 불가 또는 중복 동의",
+            @ApiResponse(responseCode = "409",
+                    description = "동의 불가, 본인 청원, 또는 중복 동의",
                     content = @Content)
     })
     @PostMapping

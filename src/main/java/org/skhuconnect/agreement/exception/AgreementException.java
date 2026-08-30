@@ -7,7 +7,8 @@ public class AgreementException extends RuntimeException {
         PETITION_NOT_FOUND,
         PETITION_NOT_AGREEABLE,
         AGREEMENT_DUPLICATE,
-        AGREEMENT_NOT_FOUND
+        AGREEMENT_NOT_FOUND,
+        SELF_AGREEMENT_NOT_ALLOWED
     }
 
     private final Reason reason;

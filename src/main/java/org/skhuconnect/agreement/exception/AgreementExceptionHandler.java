@@ -14,7 +14,7 @@ public class AgreementExceptionHandler {
         HttpStatus status = switch (exception.getReason()) {
             case USER_NOT_FOUND, PETITION_NOT_FOUND, AGREEMENT_NOT_FOUND ->
                     HttpStatus.NOT_FOUND;
-            case PETITION_NOT_AGREEABLE, AGREEMENT_DUPLICATE ->
+            case PETITION_NOT_AGREEABLE, AGREEMENT_DUPLICATE, SELF_AGREEMENT_NOT_ALLOWED ->
                     HttpStatus.CONFLICT;
         };
         ProblemDetail detail = ProblemDetail.forStatus(status);
@@ -24,6 +24,7 @@ public class AgreementExceptionHandler {
             case PETITION_NOT_AGREEABLE -> "Petition is not agreeable";
             case AGREEMENT_DUPLICATE -> "Petition agreement already exists";
             case AGREEMENT_NOT_FOUND -> "Petition agreement not found";
+            case SELF_AGREEMENT_NOT_ALLOWED -> "Cannot agree to own petition";
         });
         return detail;
     }

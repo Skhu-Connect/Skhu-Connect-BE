@@ -57,6 +57,9 @@ public class AgreementService {
                 .orElseThrow(() -> new AgreementException(Reason.USER_NOT_FOUND));
         LocalDateTime now = LocalDateTime.now(clock);
         validateAgreeable(petition, now);
+        if (petition.isWrittenBy(userId)) {
+            throw new AgreementException(Reason.SELF_AGREEMENT_NOT_ALLOWED);
+        }
         if (agreementRepository.existsByPetitionIdAndUserId(petitionId, userId)) {
             throw new AgreementException(Reason.AGREEMENT_DUPLICATE);
         }
