@@ -81,6 +81,7 @@ OPEN --30일 내 미달성--> EXPIRED
 - hidden/deleted 청원은 사용자 조회와 변경 기능에서 제외한다.
 - 동의 등록은 Petition 행을 `PESSIMISTIC_WRITE`로 잠근다.
 - `(petition_id,user_id)` UNIQUE로 중복 동의를 막는다.
+- 작성자는 자기 청원에 동의할 수 없다(409). 이 제한을 넣기 전에 이미 생긴 자기 동의는 그대로 두며, 취소(cancel)는 이후에도 제한 없이 허용한다 - 작성자가 스스로 취소해 동의 0건으로 되돌리는 것이 유일한 탈출구다.
 - 목표 달성 시 최초 한 번 `UNDER_REVIEW`와 `review_started_at`을 설정한다.
 - 청원 공개 조회는 기존 동작을 유지한다.
 - 청원 공유는 프론트의 기존 청원 상세 HTTPS URL을 사용하며, 백엔드는 기존 청원 상세·댓글 목록 API를 재사용한다.
