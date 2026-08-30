@@ -50,6 +50,7 @@ class UserTest {
         assertNotificationColumn("notifyReply", "notify_reply");
         assertNotificationColumn("notifyLike", "notify_like");
         assertNotificationColumn("notifyNotice", "notify_notice");
+        assertNotificationColumn("notifyReport", "notify_report");
         assertDepartmentMapping();
         assertIndexes(table.indexes());
     }
@@ -86,6 +87,7 @@ class UserTest {
         assertThat(user.isNotifyReply()).isTrue();
         assertThat(user.isNotifyLike()).isTrue();
         assertThat(user.isNotifyNotice()).isTrue();
+        assertThat(user.isNotifyReport()).isTrue();
     }
 
     @Test
@@ -103,7 +105,7 @@ class UserTest {
         user.changeLoginId("changed-login-id");
         user.changeDepartment(changedDepartment);
         user.changeNotificationEnabled(false);
-        user.changeNotificationSettings(null, null, null, false, null);
+        user.changeNotificationSettings(null, null, null, false, null, false);
 
         assertThat(user.getPassword()).isEqualTo("changed-encoded-password");
         assertThat(user.getLoginId()).isEqualTo("changed-login-id");
@@ -114,6 +116,22 @@ class UserTest {
         assertThat(user.allows(NotificationPoint.REPLY)).isTrue();
         assertThat(user.allows(NotificationPoint.LIKE)).isFalse();
         assertThat(user.allows(NotificationPoint.NOTICE)).isTrue();
+        assertThat(user.allows(NotificationPoint.REPORT)).isFalse();
+    }
+
+    @Test
+    void banLoginSetsStateAndRejectsDoubleBan() {
+        Department department = Department.create("SOFTWARE", "소프트웨어융합학부");
+        User user = User.create("student@office.skhu.ac.kr", "student", "encoded-password", department);
+        org.skhuconnect.admin.entity.Admin admin = org.skhuconnect.admin.entity.Admin.create("admin", "encoded");
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+
+        assertThat(user.isLoginBanned()).isFalse();
+        user.banLogin("반복적인 욕설 신고", admin, now);
+        assertThat(user.isLoginBanned()).isTrue();
+        assertThat(user.getLoginBanReason()).isEqualTo("반복적인 욕설 신고");
+        assertThat(org.assertj.core.api.Assertions.catchThrowable(() -> user.banLogin("again", admin, now)))
+                .isInstanceOf(IllegalStateException.class);
     }
 
     @Test

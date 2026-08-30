@@ -28,7 +28,7 @@ class CommentAuthenticationFilterTest {
         org.skhuconnect.user.repository.UserRepository users =
                 mock(org.skhuconnect.user.repository.UserRepository.class);
         filter = new AccessTokenAuthenticationFilter(jwtDecoder, users);
-        when(users.existsByIdAndDeletedFalse(org.mockito.ArgumentMatchers.anyLong())).thenReturn(true);
+        when(users.existsByIdAndDeletedFalseAndLoginBannedFalse(org.mockito.ArgumentMatchers.anyLong())).thenReturn(true);
         chain = mock(FilterChain.class);
     }
 

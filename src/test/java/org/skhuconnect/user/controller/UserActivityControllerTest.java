@@ -51,7 +51,7 @@ class UserActivityControllerTest {
         when(service.findMe(1L)).thenReturn(new UserMeResponse(
                 "user@office.skhu.ac.kr", "login-user",
                 "SW", "소프트웨어공학과", true,
-                new NotificationSettingsResponse(true, true, true, false, true)));
+                new NotificationSettingsResponse(true, true, true, false, true, true)));
 
         mockMvc.perform(get("/connect/users/me").requestAttr("userId", 1L))
                 .andExpect(status().isOk())
@@ -70,7 +70,7 @@ class UserActivityControllerTest {
                 org.mockito.ArgumentMatchers.eq(1L),
                 org.mockito.ArgumentMatchers.any()))
                 .thenReturn(new NotificationSettingsResponse(
-                        true, true, true, false, true));
+                        true, true, true, false, true, true));
 
         mockMvc.perform(patch("/connect/users/me/notification-settings")
                         .requestAttr("userId", 1L)

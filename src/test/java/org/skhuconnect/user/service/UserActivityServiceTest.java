@@ -85,7 +85,7 @@ class UserActivityServiceTest {
 
         var response = service.updateNotificationSettings(1L,
                 new NotificationSettingsUpdateRequest(
-                        null, null, null, false, null));
+                        null, null, null, false, null, null));
 
         assertThat(response.agreement()).isTrue();
         assertThat(response.answer()).isTrue();
@@ -99,7 +99,7 @@ class UserActivityServiceTest {
     void rejectsEmptyNotificationSettings() {
         assertThatThrownBy(() -> service.updateNotificationSettings(1L,
                 new NotificationSettingsUpdateRequest(
-                        null, null, null, null, null)))
+                        null, null, null, null, null, null)))
                 .isInstanceOf(UserActivityException.class)
                 .extracting("reason")
                 .isEqualTo(UserActivityException.Reason.INVALID_NOTIFICATION_SETTINGS);
@@ -111,7 +111,7 @@ class UserActivityServiceTest {
 
         assertThatThrownBy(() -> service.updateNotificationSettings(1L,
                 new NotificationSettingsUpdateRequest(
-                        null, true, null, null, null)))
+                        null, true, null, null, null, null)))
                 .isInstanceOf(UserActivityException.class)
                 .extracting("reason")
                 .isEqualTo(UserActivityException.Reason.USER_NOT_FOUND);
