@@ -30,7 +30,7 @@ class AccessTokenAuthenticationFilterTest {
     void setUp() {
         jwtDecoder = mock(JwtDecoder.class);
         users = mock(org.skhuconnect.user.repository.UserRepository.class);
-        when(users.existsByIdAndDeletedFalseAndLoginBannedFalse(org.mockito.ArgumentMatchers.anyLong())).thenReturn(true);
+        when(users.existsByIdAndDeletedFalse(org.mockito.ArgumentMatchers.anyLong())).thenReturn(true);
         filter = new AccessTokenAuthenticationFilter(jwtDecoder, users);
         filterChain = mock(FilterChain.class);
     }
@@ -341,7 +341,7 @@ class AccessTokenAuthenticationFilterTest {
         request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer withdrawn-token");
         MockHttpServletResponse response = new MockHttpServletResponse();
         when(jwtDecoder.decode("withdrawn-token")).thenReturn(userJwt("42", "USER"));
-        when(users.existsByIdAndDeletedFalseAndLoginBannedFalse(42L)).thenReturn(false);
+        when(users.existsByIdAndDeletedFalse(42L)).thenReturn(false);
 
         filter.doFilter(request, response, filterChain);
 

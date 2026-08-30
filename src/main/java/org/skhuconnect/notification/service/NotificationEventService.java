@@ -7,10 +7,6 @@ import org.skhuconnect.notification.entity.*;
 import org.skhuconnect.notification.fcm.FcmPushService;
 import org.skhuconnect.notification.repository.NotificationRepository;
 import org.skhuconnect.petition.entity.Petition;
-import org.skhuconnect.report.entity.Report;
-import org.skhuconnect.report.entity.ReportActionType;
-import org.skhuconnect.report.entity.ReportStatus;
-import org.skhuconnect.report.entity.ReportTargetType;
 import org.skhuconnect.user.entity.User;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -60,21 +56,6 @@ public class NotificationEventService {
         NotificationType type = comment.isReply() ? REPLY_LIKE : COMMENT_LIKE;
         createOnce(receiver, type, comment.getPetition(), comment,
                 "comment:like:" + comment.getId() + ":" + actor.getId() + ":" + receiver.getId());
-    }
-
-    public void onReportProcessed(Report report) {
-        User reporter = report.getReporter();
-        Petition petition = report.getPetition();
-        Comment comment = report.getComment();
-        NotificationType reporterType = report.getStatus() == ReportStatus.DISMISSED ? REPORT_DISMISSED : REPORT_ACTION_TAKEN;
-        createOnce(reporter, reporterType, petition, comment,
-                "report:" + report.getId() + ":reporter:" + reporter.getId());
-        if (report.getStatus() == ReportStatus.ACTION_TAKEN) {
-            User target = report.getTargetType() == ReportTargetType.PETITION ? petition.getWriter() : comment.getWriter();
-            NotificationType targetType = report.getActionType() == ReportActionType.HIDE ? CONTENT_HIDDEN : ACCOUNT_LOGIN_BANNED;
-            createOnce(target, targetType, petition, comment,
-                    "report:" + report.getId() + ":target:" + target.getId());
-        }
     }
 
     public void onReplyCreated(Comment reply) {

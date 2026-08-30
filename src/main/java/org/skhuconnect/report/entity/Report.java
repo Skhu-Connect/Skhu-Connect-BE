@@ -24,7 +24,6 @@ public class Report extends BaseEntity {
  @Column(nullable=false,length=50) private ReportReasonType reasonType;
  @Column(nullable=false,length=500) private String reasonDetail;
  @Enumerated(EnumType.STRING) @Column(nullable=false,length=30) private ReportStatus status;
- @Enumerated(EnumType.STRING) @Column(length=30) private ReportActionType actionType;
  @ManyToOne(fetch=FetchType.LAZY) @JoinColumn(name="processed_by_admin_id") private Admin processedByAdmin;
  @Column private LocalDateTime processedAt;
  @Column(length=500) private String processingReason;
@@ -35,9 +34,9 @@ public class Report extends BaseEntity {
  }
  public static Report forPetition(User u,Petition p,ReportReasonType t,String d){return new Report(u,p,null,ReportTargetType.PETITION,t,d);}
  public static Report forComment(User u,Comment c,ReportReasonType t,String d){return new Report(u,null,c,ReportTargetType.COMMENT,t,d);}
- public void process(ReportStatus s,ReportActionType actionType,Admin a,String reason,LocalDateTime at){if(s==ReportStatus.PENDING || status!=ReportStatus.PENDING) throw new IllegalStateException(); if(s==ReportStatus.ACTION_TAKEN && actionType==null) throw new IllegalStateException(); if(s==ReportStatus.DISMISSED && actionType!=null) throw new IllegalStateException(); status=s; this.actionType=actionType; processedByAdmin=Objects.requireNonNull(a); processingReason=require(reason,"processingReason",500); processedAt=Objects.requireNonNull(at);}
+ public void process(ReportStatus s,Admin a,String reason,LocalDateTime at){if(s==ReportStatus.PENDING || status!=ReportStatus.PENDING) throw new IllegalStateException(); status=s; processedByAdmin=Objects.requireNonNull(a); processingReason=require(reason,"processingReason",500); processedAt=Objects.requireNonNull(at);}
  private static String requireDetail(String v){if(v==null||v.isBlank()||v.length()<10||v.length()>500)throw new IllegalArgumentException("reasonDetail");return v;} private static String require(String v,String n,int max){if(v==null||v.isBlank()||v.length()>max)throw new IllegalArgumentException(n);return v;}
  public Long getId(){return id;} public User getReporter(){return reporter;} public Petition getPetition(){return petition;} public Comment getComment(){return comment;}
  public ReportTargetType getTargetType(){return targetType;} public ReportReasonType getReasonType(){return reasonType;} public String getReasonDetail(){return reasonDetail;}
- public ReportStatus getStatus(){return status;} public ReportActionType getActionType(){return actionType;} public Admin getProcessedByAdmin(){return processedByAdmin;} public LocalDateTime getProcessedAt(){return processedAt;} public String getProcessingReason(){return processingReason;}
+ public ReportStatus getStatus(){return status;} public Admin getProcessedByAdmin(){return processedByAdmin;} public LocalDateTime getProcessedAt(){return processedAt;} public String getProcessingReason(){return processingReason;}
 }

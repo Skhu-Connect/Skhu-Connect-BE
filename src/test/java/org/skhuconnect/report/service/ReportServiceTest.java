@@ -6,16 +6,13 @@ import org.skhuconnect.admin.entity.Admin;
 import org.skhuconnect.admin.repository.AdminRepository;
 import org.skhuconnect.comment.entity.Comment;
 import org.skhuconnect.comment.repository.CommentRepository;
-import org.skhuconnect.notification.service.NotificationEventService;
 import org.skhuconnect.petition.entity.Petition;
 import org.skhuconnect.petition.repository.PetitionRepository;
 import org.skhuconnect.report.dto.ReportProcessRequest;
 import org.skhuconnect.report.dto.ReportResponse;
 import org.skhuconnect.report.entity.Report;
-import org.skhuconnect.report.entity.ReportActionType;
 import org.skhuconnect.report.entity.ReportReasonType;
 import org.skhuconnect.report.entity.ReportStatus;
-import org.skhuconnect.report.exception.ReportException;
 import org.skhuconnect.report.repository.ReportRepository;
 import org.skhuconnect.user.entity.User;
 import org.skhuconnect.user.repository.UserRepository;
@@ -27,7 +24,6 @@ import java.time.ZoneId;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -41,7 +37,6 @@ class ReportServiceTest {
 
     private ReportRepository reports;
     private AdminRepository admins;
-    private NotificationEventService notificationEvents;
     private ReportService service;
     private Admin admin;
 
@@ -50,14 +45,12 @@ class ReportServiceTest {
         reports = mock(ReportRepository.class);
         admins = mock(AdminRepository.class);
         admin = mock(Admin.class);
-        notificationEvents = mock(NotificationEventService.class);
         service = new ReportService(
                 reports,
                 mock(UserRepository.class),
                 mock(PetitionRepository.class),
                 mock(CommentRepository.class),
                 admins,
-                notificationEvents,
                 Clock.fixed(NOW.atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault()));
         when(admins.findById(7L)).thenReturn(Optional.of(admin));
     }
@@ -111,42 +104,6 @@ class ReportServiceTest {
         assertThat(report.getStatus()).isEqualTo(ReportStatus.ACTION_TAKEN);
     }
 
-    @Test
-    void 로그인_금지_조치는_대상_작성자를_정지시키고_글은_숨기지_않는다() {
-        Petition petition = mock(Petition.class);
-        User writer = mock(User.class);
-        when(petition.getWriter()).thenReturn(writer);
-        Report report = petitionReport(petition);
-
-        service.process(7L, 1L, new ReportProcessRequest(
-                ReportStatus.ACTION_TAKEN, "반복적인 욕설", ReportActionType.USER_LOGIN_BAN));
-
-        verify(writer).banLogin("반복적인 욕설", admin, NOW);
-        verify(petition, never()).hide(anyString(), any(), any());
-        assertThat(report.getActionType()).isEqualTo(ReportActionType.USER_LOGIN_BAN);
-    }
-
-    @Test
-    void 조치함_처리는_actionType_없이_요청할_수_없다() {
-        petitionReport(mock(Petition.class));
-
-        assertThatThrownBy(() -> service.process(7L, 1L,
-                new ReportProcessRequest(ReportStatus.ACTION_TAKEN, "욕설", null)))
-                .isInstanceOf(ReportException.class)
-                .extracting("reason")
-                .isEqualTo(ReportException.Reason.MISSING_ACTION_TYPE);
-    }
-
-    @Test
-    void 신고_처리_결과는_신고자와_대상에게_알림으로_전달된다() {
-        Petition petition = mock(Petition.class);
-        Report report = petitionReport(petition);
-
-        service.process(7L, 1L, actionTaken());
-
-        verify(notificationEvents).onReportProcessed(report);
-    }
-
     private Report petitionReport(Petition petition) {
         Report report = Report.forPetition(
                 mock(User.class), petition, ReportReasonType.ABUSE, "욕설이 포함된 글이라 신고합니다.");
@@ -162,6 +119,6 @@ class ReportServiceTest {
     }
 
     private ReportProcessRequest actionTaken() {
-        return new ReportProcessRequest(ReportStatus.ACTION_TAKEN, "욕설", ReportActionType.HIDE);
+        return new ReportProcessRequest(ReportStatus.ACTION_TAKEN, "욕설");
     }
 }

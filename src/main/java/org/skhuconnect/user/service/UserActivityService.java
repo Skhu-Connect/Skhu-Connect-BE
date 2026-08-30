@@ -95,8 +95,7 @@ public class UserActivityService {
                 request.answer(),
                 request.reply(),
                 request.like(),
-                request.notice(),
-                request.report()
+                request.notice()
         );
         return NotificationSettingsResponse.from(user);
     }

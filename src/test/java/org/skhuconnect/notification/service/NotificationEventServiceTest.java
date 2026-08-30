@@ -106,21 +106,7 @@ class NotificationEventServiceTest {
         assertThat(published.receiverId()).isEqualTo(1L);
         assertThat(published.petitionId()).isEqualTo(10L);
         assertThat(published.title()).isEqualTo("SKHU Connect");
-        Notification expected=mock(Notification.class); when(expected.getType()).thenReturn(NotificationType.PETITION_ANSWERED);
-        assertThat(published.body()).isEqualTo(NotificationResponse.message(expected));
-    }
-    @Test void reportProcessedNotifiesReporterAndTarget() {
-        User reporter=user(1L); User writer=user(2L);
-        Petition petition=mock(Petition.class); when(petition.getWriter()).thenReturn(writer);
-        org.skhuconnect.report.entity.Report report=org.skhuconnect.report.entity.Report.forPetition(
-                reporter, petition, org.skhuconnect.report.entity.ReportReasonType.ABUSE, "욕설이 포함된 글이라 신고합니다.");
-        report.process(org.skhuconnect.report.entity.ReportStatus.ACTION_TAKEN,
-                org.skhuconnect.report.entity.ReportActionType.HIDE,
-                mock(org.skhuconnect.admin.entity.Admin.class), "확인", java.time.LocalDateTime.now());
-
-        service.onReportProcessed(report);
-
-        verify(notifications, times(2)).saveAndFlush(any(Notification.class));
+        assertThat(published.body()).isEqualTo(NotificationResponse.message(NotificationType.PETITION_ANSWERED));
     }
     private User user(long id){ User u=mock(User.class); when(u.getId()).thenReturn(id); when(u.isNotificationEnabled()).thenReturn(true); when(u.allows(any())).thenReturn(true); return u; }
 }

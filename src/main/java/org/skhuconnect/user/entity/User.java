@@ -11,7 +11,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.ColumnDefault;
-import org.skhuconnect.admin.entity.Admin;
 import org.skhuconnect.department.entity.Department;
 import org.skhuconnect.global.entity.BaseEntity;
 import org.skhuconnect.notification.entity.NotificationPoint;
@@ -74,30 +73,12 @@ public class User extends BaseEntity {
     @ColumnDefault("true")
     private boolean notifyNotice = true;
 
-    @Column(name = "notify_report", nullable = false)
-    @ColumnDefault("true")
-    private boolean notifyReport = true;
-
     @Column(name = "deleted", nullable = false)
     @ColumnDefault("false")
     private boolean deleted;
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
-
-    @Column(name = "login_banned", nullable = false)
-    @ColumnDefault("false")
-    private boolean loginBanned;
-
-    @Column(name = "login_ban_reason", length = 500)
-    private String loginBanReason;
-
-    @Column(name = "login_banned_at")
-    private LocalDateTime loginBannedAt;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "login_banned_by_admin_id")
-    private Admin loginBannedByAdmin;
 
     protected User() {
     }
@@ -122,9 +103,7 @@ public class User extends BaseEntity {
         this.notifyReply = true;
         this.notifyLike = true;
         this.notifyNotice = true;
-        this.notifyReport = true;
         this.deleted = false;
-        this.loginBanned = false;
     }
 
     public static User create(
@@ -160,15 +139,13 @@ public class User extends BaseEntity {
             Boolean answer,
             Boolean reply,
             Boolean like,
-            Boolean notice,
-            Boolean report
+            Boolean notice
     ) {
         if (agreement != null) notifyAgreement = agreement;
         if (answer != null) notifyAnswer = answer;
         if (reply != null) notifyReply = reply;
         if (like != null) notifyLike = like;
         if (notice != null) notifyNotice = notice;
-        if (report != null) notifyReport = report;
     }
 
     public boolean allows(NotificationPoint point) {
@@ -178,26 +155,7 @@ public class User extends BaseEntity {
             case REPLY -> notifyReply;
             case LIKE -> notifyLike;
             case NOTICE -> notifyNotice;
-            case REPORT -> notifyReport;
         };
-    }
-
-    public void banLogin(String reason, Admin admin, LocalDateTime at) {
-        if (loginBanned) {
-            throw new IllegalStateException("user is already login banned");
-        }
-        this.loginBanned = true;
-        this.loginBanReason = Objects.requireNonNull(reason, "reason must not be null");
-        this.loginBannedByAdmin = Objects.requireNonNull(admin, "admin must not be null");
-        this.loginBannedAt = Objects.requireNonNull(at, "at must not be null");
-    }
-
-    public boolean isLoginBanned() {
-        return loginBanned;
-    }
-
-    public String getLoginBanReason() {
-        return loginBanReason;
     }
 
     public void withdraw(LocalDateTime withdrawnAt) {
@@ -216,7 +174,6 @@ public class User extends BaseEntity {
         this.notifyReply = false;
         this.notifyLike = false;
         this.notifyNotice = false;
-        this.notifyReport = false;
         this.deleted = true;
         this.deletedAt = Objects.requireNonNull(withdrawnAt, "withdrawnAt must not be null");
     }
@@ -263,10 +220,6 @@ public class User extends BaseEntity {
 
     public boolean isNotifyNotice() {
         return notifyNotice;
-    }
-
-    public boolean isNotifyReport() {
-        return notifyReport;
     }
 
     public boolean isDeleted() {

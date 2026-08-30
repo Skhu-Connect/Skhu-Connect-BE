@@ -5,6 +5,5 @@ public enum NotificationPoint {
     ANSWER,
     REPLY,
     LIKE,
-    NOTICE,
-    REPORT
+    NOTICE
 }
