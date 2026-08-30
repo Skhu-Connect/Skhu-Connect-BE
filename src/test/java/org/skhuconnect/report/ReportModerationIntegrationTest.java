@@ -93,7 +93,7 @@ class ReportModerationIntegrationTest {
                         .header("Authorization", "Bearer " + admin)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"status":"ACTION_TAKEN","processingReason":"욕설 확인"}
+                                {"status":"ACTION_TAKEN","processingReason":"욕설 확인","actionType":"HIDE"}
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ACTION_TAKEN"))

@@ -49,7 +49,7 @@
 1. 문서·코드·테스트 분석
 2. 정책 충돌과 선행 조건 확인
 3. 필요한 경우 `ARCHITECTURE.md`, `ERD.md` 먼저 갱신
-4. Entity와 DB 제약
+4. Entity와 DB 제약 - enum 매핑 컬럼에 새 값을 추가할 때는 프로덕션에 이미 배포된 DB의 CHECK 제약·네이티브 ENUM 값 목록을 먼저 확인한다. `ddl-auto=update`는 기존 제약을 갱신하지 않는다(ERD.md 26절, 2026-08-30 장애 사례).
 5. Repository
 6. Service와 트랜잭션
 7. DTO·Controller·Swagger·예외
