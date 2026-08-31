@@ -55,6 +55,16 @@ class PasswordResetControllerTest {
     }
 
     @Test
+    void invalidPasswordPolicyReturnsBadRequest() throws Exception {
+        mockMvc.perform(post("/connect/auth/password/reset")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"verificationToken":"raw-token", "newPassword":"abc-12"}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void invalidOrWrongPurposeTokenReturnsBadRequest() throws Exception {
         assertTokenError(EmailVerificationException.Reason.TOKEN_INVALID, 400);
         assertTokenError(EmailVerificationException.Reason.PURPOSE_MISMATCH, 400);
@@ -104,7 +114,7 @@ class PasswordResetControllerTest {
         return post("/connect/auth/password/reset")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"verificationToken":"raw-token", "newPassword":"new-password"}
+                        {"verificationToken":"raw-token", "newPassword":"newPassword1"}
                         """);
     }
 }

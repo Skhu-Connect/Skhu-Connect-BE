@@ -129,7 +129,7 @@ class UserActivityControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"currentPassword":"current-password",
-                                 "newPassword":"new-password"}
+                                 "newPassword":"newPassword1"}
                                 """))
                 .andExpect(status().isNoContent())
                 .andExpect(jsonPath("$").doesNotExist());
@@ -165,7 +165,7 @@ class UserActivityControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"currentPassword":"wrong",
-                                 "newPassword":"new-password"}
+                                 "newPassword":"newPassword1"}
                                 """))
                 .andExpect(status().isUnauthorized());
     }
@@ -181,6 +181,20 @@ class UserActivityControllerTest {
                         .requestAttr("userId", 7L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"currentPassword\":\"\",\"newPassword\":\"\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void invalidAccountPolicyRequestsAreBadRequest() throws Exception {
+        mockMvc.perform(patch("/connect/users/me/login-id")
+                        .requestAttr("userId", 7L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"newLoginId\":\"new login\",\"password\":\"current-password\"}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(patch("/connect/users/me/password")
+                        .requestAttr("userId", 7L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentPassword\":\"current-password\",\"newPassword\":\"abc-12\"}"))
                 .andExpect(status().isBadRequest());
     }
 

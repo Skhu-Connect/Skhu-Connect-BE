@@ -10,9 +10,14 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice(assignableTypes = PasswordResetController.class)
 public class PasswordResetExceptionHandler {
     @ExceptionHandler(PasswordResetException.class)
-    public ProblemDetail handlePasswordReset() {
-        ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
-        detail.setTitle("User not found");
+    public ProblemDetail handlePasswordReset(PasswordResetException exception) {
+        HttpStatus status = switch (exception.getReason()) {
+            case INVALID_PASSWORD -> HttpStatus.BAD_REQUEST;
+            case USER_NOT_FOUND -> HttpStatus.NOT_FOUND;
+        };
+        ProblemDetail detail = ProblemDetail.forStatus(status);
+        detail.setTitle(exception.getReason() == PasswordResetException.Reason.INVALID_PASSWORD
+                ? "Invalid password policy" : "User not found");
         return detail;
     }
 

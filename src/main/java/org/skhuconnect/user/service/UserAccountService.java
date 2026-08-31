@@ -1,6 +1,7 @@
 package org.skhuconnect.user.service;
 
 import org.skhuconnect.auth.loginid.dto.LoginIdResponse;
+import org.skhuconnect.auth.validation.AuthValidationPolicy;
 import org.skhuconnect.user.dto.LoginIdUpdateRequest;
 import org.skhuconnect.user.dto.PasswordChangeRequest;
 import org.skhuconnect.user.entity.User;
@@ -30,7 +31,7 @@ public class UserAccountService {
         User user = findUserForUpdate(userId);
         requireCurrentPassword(request.password(), user);
         String newLoginId = request.newLoginId();
-        if (newLoginId == null || newLoginId.isBlank() || newLoginId.length() > 50) {
+        if (!AuthValidationPolicy.isValidLoginId(newLoginId)) {
             throw error(UserActivityException.Reason.INVALID_ACCOUNT_REQUEST);
         }
         if (newLoginId.equals(user.getLoginId())) {
@@ -52,7 +53,7 @@ public class UserAccountService {
     public void changePassword(Long userId, PasswordChangeRequest request) {
         User user = findUserForUpdate(userId);
         requireCurrentPassword(request.currentPassword(), user);
-        if (request.newPassword() == null || request.newPassword().isBlank()) {
+        if (!AuthValidationPolicy.isValidPassword(request.newPassword())) {
             throw error(UserActivityException.Reason.INVALID_ACCOUNT_REQUEST);
         }
         if (passwordEncoder.matches(request.newPassword(), user.getPassword())) {

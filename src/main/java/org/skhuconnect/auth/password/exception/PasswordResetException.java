@@ -1,7 +1,7 @@
 package org.skhuconnect.auth.password.exception;
 
 public class PasswordResetException extends RuntimeException {
-    public enum Reason { USER_NOT_FOUND }
+    public enum Reason { INVALID_PASSWORD, USER_NOT_FOUND }
 
     private final Reason reason;
 

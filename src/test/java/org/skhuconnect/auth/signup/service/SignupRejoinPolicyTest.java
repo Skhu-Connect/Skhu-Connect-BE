@@ -54,7 +54,7 @@ class SignupRejoinPolicyTest {
                 histories, termsAgreements, emailHasher,
                 Clock.fixed(Instant.parse("2030-01-31T00:00:00Z"), ZoneOffset.UTC));
         request = new SignupRequest(
-                "token", "new-login", "password", 1L, true, "1.0");
+                "token", "new-login", "password1", 1L, true, "1.0");
         when(verifications.consumeToken("token", EmailVerificationPurpose.SIGN_UP))
                 .thenReturn("student@office.skhu.ac.kr");
         when(emailHasher.hash("student@office.skhu.ac.kr")).thenReturn("h".repeat(64));
@@ -77,7 +77,7 @@ class SignupRejoinPolicyTest {
     void sameEmailAtThirtyDayBoundaryCreatesNewUser() {
         when(departments.findById(1L)).thenReturn(Optional.of(
                 Department.create("CS", "소프트웨어공학과")));
-        when(passwords.encode("password")).thenReturn("encoded");
+        when(passwords.encode("password1")).thenReturn("encoded");
 
         service.signup(request);
 

@@ -46,12 +46,12 @@ class PasswordResetIntegrationTest {
         TestData data = createData(true);
         try {
             passwordResetService.resetPassword(
-                    new PasswordResetRequest(data.rawToken(), "new-password"));
+                    new PasswordResetRequest(data.rawToken(), "newPassword1"));
 
             User saved = userRepository.findByEmail(data.email()).orElseThrow();
             EmailVerification verification = findVerification(data.rawToken());
-            assertThat(passwordEncoder.matches("new-password", saved.getPassword())).isTrue();
-            assertThat(saved.getPassword()).isNotEqualTo("new-password");
+            assertThat(passwordEncoder.matches("newPassword1", saved.getPassword())).isTrue();
+            assertThat(saved.getPassword()).isNotEqualTo("newPassword1");
             assertThat(verification.isUsed()).isTrue();
 
             assertThatThrownBy(() -> userAuthService.login(
@@ -61,7 +61,7 @@ class PasswordResetIntegrationTest {
                     .isEqualTo(UserAuthException.Reason.INVALID_CREDENTIALS);
 
             TokenIssueResult login = userAuthService.login(
-                    saved.getLoginId(), "new-password");
+                    saved.getLoginId(), "newPassword1");
             try {
                 assertThat(login.accessToken()).isNotBlank();
             } finally {
@@ -69,7 +69,7 @@ class PasswordResetIntegrationTest {
             }
 
             assertThatThrownBy(() -> passwordResetService.resetPassword(
-                    new PasswordResetRequest(data.rawToken(), "another-password")))
+                    new PasswordResetRequest(data.rawToken(), "anotherPassword1")))
                     .isInstanceOf(EmailVerificationException.class)
                     .extracting("reason")
                     .isEqualTo(EmailVerificationException.Reason.TOKEN_USED);
@@ -83,7 +83,7 @@ class PasswordResetIntegrationTest {
         TestData data = createData(false);
         try {
             assertThatThrownBy(() -> passwordResetService.resetPassword(
-                    new PasswordResetRequest(data.rawToken(), "new-password")))
+                    new PasswordResetRequest(data.rawToken(), "newPassword1")))
                     .isInstanceOf(PasswordResetException.class);
 
             EmailVerification verification = findVerification(data.rawToken());

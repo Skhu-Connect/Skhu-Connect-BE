@@ -95,12 +95,12 @@ class UserAccountServiceTest {
     void changesPasswordAfterCurrentPasswordVerification() {
         when(passwords.matches("current-password", "encoded-current"))
                 .thenReturn(true);
-        when(passwords.matches("new-password", "encoded-current"))
+        when(passwords.matches("newPassword1", "encoded-current"))
                 .thenReturn(false);
-        when(passwords.encode("new-password")).thenReturn("encoded-new");
+        when(passwords.encode("newPassword1")).thenReturn("encoded-new");
 
         service.changePassword(1L,
-                new PasswordChangeRequest("current-password", "new-password"));
+                new PasswordChangeRequest("current-password", "newPassword1"));
 
         assertThat(user.getPassword()).isEqualTo("encoded-new");
         verify(users).findByIdForUpdate(1L);
@@ -111,21 +111,21 @@ class UserAccountServiceTest {
         when(passwords.matches("wrong", "encoded-current")).thenReturn(false);
 
         assertReason(() -> service.changePassword(1L,
-                        new PasswordChangeRequest("wrong", "new-password")),
+                        new PasswordChangeRequest("wrong", "newPassword1")),
                 UserActivityException.Reason.CURRENT_PASSWORD_MISMATCH);
 
         assertThat(user.getPassword()).isEqualTo("encoded-current");
-        verify(passwords, never()).encode("new-password");
+        verify(passwords, never()).encode("newPassword1");
     }
 
     @Test
     void currentPasswordCannotBeReusedAsNewPassword() {
-        when(passwords.matches("current-password", "encoded-current"))
+        when(passwords.matches("currentPassword1", "encoded-current"))
                 .thenReturn(true);
 
         assertReason(() -> service.changePassword(1L,
                         new PasswordChangeRequest(
-                                "current-password", "current-password")),
+                                "currentPassword1", "currentPassword1")),
                 UserActivityException.Reason.PASSWORD_UNCHANGED);
         assertThat(user.getPassword()).isEqualTo("encoded-current");
     }
@@ -136,8 +136,32 @@ class UserAccountServiceTest {
 
         assertReason(() -> service.changePassword(1L,
                         new PasswordChangeRequest(
-                                "current-password", "new-password")),
+                                "current-password", "newPassword1")),
                 UserActivityException.Reason.USER_NOT_FOUND);
+    }
+
+    @Test
+    void invalidLoginIdPolicyIsRejectedBeforeDuplicateCheck() {
+        when(passwords.matches("current-password", "encoded-current"))
+                .thenReturn(true);
+
+        assertReason(() -> service.changeLoginId(1L,
+                        new LoginIdUpdateRequest("학생12345", "current-password")),
+                UserActivityException.Reason.INVALID_ACCOUNT_REQUEST);
+
+        verify(users, never()).existsByLoginId("학생12345");
+    }
+
+    @Test
+    void invalidNewPasswordPolicyIsRejectedBeforeEncoding() {
+        when(passwords.matches("current-password", "encoded-current"))
+                .thenReturn(true);
+
+        assertReason(() -> service.changePassword(1L,
+                        new PasswordChangeRequest("current-password", "abc-12")),
+                UserActivityException.Reason.INVALID_ACCOUNT_REQUEST);
+
+        verify(passwords, never()).encode("abc-12");
     }
 
     private void assertReason(Runnable action, UserActivityException.Reason reason) {

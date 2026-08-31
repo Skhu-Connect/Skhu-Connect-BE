@@ -53,12 +53,12 @@ class PasswordResetFailureIntegrationTest {
                 now.plusMinutes(5), now);
         verification.verify(hasher.hashToken(rawToken), now, now.plusMinutes(30));
         verificationRepository.saveAndFlush(verification);
-        when(passwordEncoder.encode("new-password"))
+        when(passwordEncoder.encode("newPassword1"))
                 .thenThrow(new IllegalStateException("encoding failed"));
 
         try {
             assertThatThrownBy(() -> passwordResetService.resetPassword(
-                    new PasswordResetRequest(rawToken, "new-password")))
+                    new PasswordResetRequest(rawToken, "newPassword1")))
                     .isInstanceOf(IllegalStateException.class);
 
             User unchanged = userRepository.findByEmail(email).orElseThrow();

@@ -140,7 +140,7 @@ public class UserActivityController {
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
                     required = true,
                     content = @Content(examples = @ExampleObject(
-                            value = "{\"currentPassword\":\"current-password\",\"newPassword\":\"new-password\"}")))
+                            value = "{\"currentPassword\":\"current-password\",\"newPassword\":\"newPassword1\"}")))
             @Valid @RequestBody PasswordChangeRequest request
     ) {
         accountService.changePassword(userId, request);

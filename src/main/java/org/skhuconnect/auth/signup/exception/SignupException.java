@@ -3,6 +3,7 @@ package org.skhuconnect.auth.signup.exception;
 public class SignupException extends RuntimeException {
 
     public enum Reason {
+        INVALID_ACCOUNT_REQUEST,
         LOGIN_ID_ALREADY_EXISTS,
         EMAIL_ALREADY_EXISTS,
         REJOIN_RESTRICTED,
