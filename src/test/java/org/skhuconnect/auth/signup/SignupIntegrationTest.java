@@ -68,13 +68,13 @@ class SignupIntegrationTest {
         emailVerificationRepository.saveAndFlush(verification);
 
         signupService.signup(new SignupRequest(
-                rawToken, loginId, "raw-password", department.getId(),
+                rawToken, loginId, "password1", department.getId(),
                 true, "1.0"));
 
         User saved = userRepository.findByLoginId(loginId).orElseThrow();
         assertThat(saved.getEmail()).isEqualTo(email);
-        assertThat(passwordEncoder.matches("raw-password", saved.getPassword())).isTrue();
-        assertThat(saved.getPassword()).isNotEqualTo("raw-password");
+        assertThat(passwordEncoder.matches("password1", saved.getPassword())).isTrue();
+        assertThat(saved.getPassword()).isNotEqualTo("password1");
         assertThat(verification.isUsed()).isTrue();
         var agreement = termsAgreementRepository
                 .findByUserIdAndTermsVersion(saved.getId(), "1.0")

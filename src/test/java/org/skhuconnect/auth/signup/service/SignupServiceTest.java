@@ -76,7 +76,7 @@ class SignupServiceTest {
                 "raw-token", EmailVerificationPurpose.SIGN_UP))
                 .thenReturn("student@office.skhu.ac.kr");
         when(departmentRepository.findById(1L)).thenReturn(Optional.of(department));
-        when(passwordEncoder.encode("raw-password")).thenReturn("bcrypt-password");
+        when(passwordEncoder.encode("password1")).thenReturn("bcrypt-password");
 
         service.signup(request);
 
@@ -101,7 +101,7 @@ class SignupServiceTest {
     @Test
     void termsNotAgreedIsRejectedBeforeVerificationTokenIsConsumed() {
         SignupRequest request = new SignupRequest(
-                "raw-token", "student01", "raw-password", 1L, false, "1.0");
+                "raw-token", "student01", "password1", 1L, false, "1.0");
 
         assertThatThrownBy(() -> service.signup(request))
                 .isInstanceOf(SignupException.class)
@@ -115,7 +115,7 @@ class SignupServiceTest {
     @Test
     void nullTermsAgreementIsRejectedByService() {
         SignupRequest request = new SignupRequest(
-                "raw-token", "student01", "raw-password", 1L, null, "1.0");
+                "raw-token", "student01", "password1", 1L, null, "1.0");
 
         assertThatThrownBy(() -> service.signup(request))
                 .isInstanceOf(SignupException.class)
@@ -126,12 +126,26 @@ class SignupServiceTest {
     @Test
     void unsupportedTermsVersionIsRejectedBeforeVerificationTokenIsConsumed() {
         SignupRequest request = new SignupRequest(
-                "raw-token", "student01", "raw-password", 1L, true, "2.0");
+                "raw-token", "student01", "password1", 1L, true, "2.0");
 
         assertThatThrownBy(() -> service.signup(request))
                 .isInstanceOf(SignupException.class)
                 .extracting("reason")
                 .isEqualTo(SignupException.Reason.UNSUPPORTED_TERMS_VERSION);
+        verify(emailVerificationService, never())
+                .consumeToken(any(), any());
+        verify(termsAgreements, never()).save(any());
+    }
+
+    @Test
+    void invalidAccountPolicyIsRejectedBeforeVerificationTokenIsConsumed() {
+        SignupRequest request = new SignupRequest(
+                "raw-token", "학생12345", "password1", 1L, true, "1.0");
+
+        assertThatThrownBy(() -> service.signup(request))
+                .isInstanceOf(SignupException.class)
+                .extracting("reason")
+                .isEqualTo(SignupException.Reason.INVALID_ACCOUNT_REQUEST);
         verify(emailVerificationService, never())
                 .consumeToken(any(), any());
         verify(termsAgreements, never()).save(any());
@@ -184,7 +198,7 @@ class SignupServiceTest {
                 .thenReturn("student@office.skhu.ac.kr");
         when(departmentRepository.findById(1L)).thenReturn(Optional.of(
                 Department.create("CS", "소프트웨어공학과")));
-        when(passwordEncoder.encode("raw-password")).thenReturn("encoded");
+        when(passwordEncoder.encode("password1")).thenReturn("encoded");
         when(userRepository.saveAndFlush(any())).thenThrow(
                 new DataIntegrityViolationException("save failed"));
 
@@ -201,6 +215,6 @@ class SignupServiceTest {
 
     private SignupRequest request() {
         return new SignupRequest(
-                "raw-token", "student01", "raw-password", 1L, true, "1.0");
+                "raw-token", "student01", "password1", 1L, true, "1.0");
     }
 }

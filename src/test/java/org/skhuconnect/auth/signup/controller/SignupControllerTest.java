@@ -56,7 +56,7 @@ class SignupControllerTest {
                                 {
                                   "verificationToken": "raw-token",
                                   "loginId": "student01",
-                                  "password": "raw-password",
+                                  "password": "password1",
                                   "departmentId": 1,
                                   "termsVersion": "1.0"
                                 }
@@ -72,7 +72,7 @@ class SignupControllerTest {
                                 {
                                   "verificationToken": "raw-token",
                                   "loginId": "student01",
-                                  "password": "raw-password",
+                                  "password": "password1",
                                   "departmentId": 1,
                                   "termsAgreed": true
                                 }
@@ -102,6 +102,23 @@ class SignupControllerTest {
                                   "loginId": "",
                                   "password": "",
                                   "departmentId": 0,
+                                  "termsAgreed": true,
+                                  "termsVersion": "1.0"
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void invalidAccountPolicyReturnsBadRequest() throws Exception {
+        mockMvc.perform(post("/connect/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "verificationToken": "raw-token",
+                                  "loginId": "학생12345",
+                                  "password": "abc-12",
+                                  "departmentId": 1,
                                   "termsAgreed": true,
                                   "termsVersion": "1.0"
                                 }
@@ -170,7 +187,7 @@ class SignupControllerTest {
                         {
                           "verificationToken": "raw-token",
                           "loginId": "student01",
-                          "password": "raw-password",
+                          "password": "password1",
                           "departmentId": 1,
                           "termsAgreed": %s,
                           "termsVersion": %s

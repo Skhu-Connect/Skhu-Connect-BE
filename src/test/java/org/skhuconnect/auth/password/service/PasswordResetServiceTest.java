@@ -16,7 +16,9 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -37,7 +39,7 @@ class PasswordResetServiceTest {
 
     @Test
     void resetPasswordUsesNormalizedVerifiedEmailAndStoresEncodedPassword() {
-        PasswordResetRequest request = new PasswordResetRequest("raw-token", "new-password");
+        PasswordResetRequest request = new PasswordResetRequest("raw-token", "newPassword1");
         User user = User.create("student@office.skhu.ac.kr", "student01",
                 "old-password", Department.create("CS", "소프트웨어공학과"));
         when(emailVerificationService.consumeToken(
@@ -45,7 +47,7 @@ class PasswordResetServiceTest {
                 .thenReturn("student@office.skhu.ac.kr");
         when(userRepository.findByEmail("student@office.skhu.ac.kr"))
                 .thenReturn(Optional.of(user));
-        when(passwordEncoder.encode("new-password")).thenReturn("bcrypt-password");
+        when(passwordEncoder.encode("newPassword1")).thenReturn("bcrypt-password");
 
         service.resetPassword(request);
 
@@ -53,7 +55,7 @@ class PasswordResetServiceTest {
                 "raw-token", EmailVerificationPurpose.PASSWORD_RESET);
         verify(userRepository).findByEmail("student@office.skhu.ac.kr");
         assertThat(user.getPassword()).isEqualTo("bcrypt-password");
-        assertThat(user.getPassword()).isNotEqualTo("new-password");
+        assertThat(user.getPassword()).isNotEqualTo("newPassword1");
     }
 
     @Test
@@ -65,10 +67,21 @@ class PasswordResetServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.resetPassword(
-                new PasswordResetRequest("raw-token", "new-password")))
+                new PasswordResetRequest("raw-token", "newPassword1")))
                 .isInstanceOf(PasswordResetException.class)
                 .extracting("reason")
                 .isEqualTo(PasswordResetException.Reason.USER_NOT_FOUND);
+    }
+
+    @Test
+    void invalidNewPasswordIsRejectedBeforeTokenConsumption() {
+        assertThatThrownBy(() -> service.resetPassword(
+                new PasswordResetRequest("raw-token", "abc-12")))
+                .isInstanceOf(PasswordResetException.class)
+                .extracting("reason")
+                .isEqualTo(PasswordResetException.Reason.INVALID_PASSWORD);
+
+        verify(emailVerificationService, never()).consumeToken(any(), any());
     }
 
     @Test

@@ -72,13 +72,13 @@ class UserAccountIntegrationTest {
         TokenIssueResult session = authService.login(data.user().getLoginId(), "current-password");
         try {
             accountService.changePassword(data.user().getId(),
-                    new PasswordChangeRequest("current-password", "new-password"));
+                    new PasswordChangeRequest("current-password", "newPassword1"));
 
             assertSessionAndFcmRemain(data, session);
             assertInvalidLogin(data.oldLoginId(), "current-password");
 
             TokenIssueResult changedLogin = authService.login(
-                    data.oldLoginId(), "new-password");
+                    data.oldLoginId(), "newPassword1");
             assertThat(changedLogin.accessToken()).isNotBlank();
             authService.logout(changedLogin.refreshToken());
         } finally {

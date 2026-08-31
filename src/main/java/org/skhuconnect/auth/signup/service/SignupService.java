@@ -7,6 +7,7 @@ import org.skhuconnect.auth.signup.entity.UserTermsAgreement;
 import org.skhuconnect.auth.signup.exception.SignupException;
 import org.skhuconnect.auth.signup.exception.SignupException.Reason;
 import org.skhuconnect.auth.signup.repository.UserTermsAgreementRepository;
+import org.skhuconnect.auth.validation.AuthValidationPolicy;
 import org.skhuconnect.department.entity.Department;
 import org.skhuconnect.department.repository.DepartmentRepository;
 import org.skhuconnect.user.entity.User;
@@ -59,6 +60,7 @@ public class SignupService {
     @Transactional
     public void signup(SignupRequest request) {
         validateTerms(request);
+        validateAccountPolicy(request);
 
         String email = emailVerificationService.consumeToken(
                 request.verificationToken(), EmailVerificationPurpose.SIGN_UP);
@@ -97,6 +99,13 @@ public class SignupService {
                 CURRENT_TERMS_VERSION,
                 LocalDateTime.now(clock)
         ));
+    }
+
+    private void validateAccountPolicy(SignupRequest request) {
+        if (!AuthValidationPolicy.isValidLoginId(request.loginId())
+                || !AuthValidationPolicy.isValidPassword(request.password())) {
+            throw new SignupException(Reason.INVALID_ACCOUNT_REQUEST);
+        }
     }
 
     private void validateTerms(SignupRequest request) {

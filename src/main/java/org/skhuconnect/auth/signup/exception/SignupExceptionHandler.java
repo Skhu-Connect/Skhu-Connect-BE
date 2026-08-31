@@ -16,10 +16,12 @@ public class SignupExceptionHandler {
             case LOGIN_ID_ALREADY_EXISTS, EMAIL_ALREADY_EXISTS, REJOIN_RESTRICTED ->
                     HttpStatus.CONFLICT;
             case DEPARTMENT_NOT_FOUND -> HttpStatus.NOT_FOUND;
-            case TERMS_NOT_AGREED, UNSUPPORTED_TERMS_VERSION -> HttpStatus.BAD_REQUEST;
+            case INVALID_ACCOUNT_REQUEST, TERMS_NOT_AGREED, UNSUPPORTED_TERMS_VERSION ->
+                    HttpStatus.BAD_REQUEST;
         };
         ProblemDetail detail = ProblemDetail.forStatus(status);
         detail.setTitle(switch (exception.getReason()) {
+            case INVALID_ACCOUNT_REQUEST -> "Invalid signup account policy";
             case LOGIN_ID_ALREADY_EXISTS -> "Login ID already exists";
             case EMAIL_ALREADY_EXISTS -> "Email already exists";
             case REJOIN_RESTRICTED ->
