@@ -7,6 +7,7 @@ import org.skhuconnect.comment.entity.PetitionAnonymousNumber;
 import org.skhuconnect.comment.exception.CommentException;
 import org.skhuconnect.comment.repository.CommentRepository;
 import org.skhuconnect.comment.repository.PetitionAnonymousNumberRepository;
+import org.skhuconnect.notification.service.NotificationEventService;
 import org.skhuconnect.petition.entity.Petition;
 import org.skhuconnect.petition.entity.PetitionCategory;
 import org.skhuconnect.petition.entity.PetitionStatus;
@@ -35,6 +36,7 @@ class CommentCreationTransactionTest {
     private PetitionAnonymousNumberRepository mappingRepository;
     private PetitionRepository petitionRepository;
     private UserRepository userRepository;
+    private NotificationEventService notificationEventService;
     private CommentCreationTransaction transaction;
     private LocalDateTime now;
 
@@ -44,11 +46,13 @@ class CommentCreationTransactionTest {
         mappingRepository = mock(PetitionAnonymousNumberRepository.class);
         petitionRepository = mock(PetitionRepository.class);
         userRepository = mock(UserRepository.class);
+        notificationEventService = mock(NotificationEventService.class);
         Clock clock = Clock.fixed(Instant.parse("2026-08-06T03:00:00Z"),
                 ZoneId.of("Asia/Seoul"));
         now = LocalDateTime.of(2026, 8, 6, 12, 0);
         transaction = new CommentCreationTransaction(commentRepository,
                 mappingRepository, petitionRepository, userRepository, clock);
+        transaction.setNotificationEventService(notificationEventService);
         when(commentRepository.saveAndFlush(any(Comment.class)))
                 .thenAnswer(invocation -> {
                     Comment comment = invocation.getArgument(0);
@@ -95,6 +99,49 @@ class CommentCreationTransactionTest {
         assertThat(response.anonymousNumber()).isEqualTo(7);
         verify(mappingRepository, never()).findMaxAnonymousNumberByPetitionId(10L);
         verify(mappingRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void rootCommentTriggersPetitionCommentNotification() {
+        User writer = user(1L);
+        User commenter = user(2L);
+        Petition petition = petition(writer, PetitionStatus.OPEN, now.minusDays(1));
+        PetitionAnonymousNumber mapping = PetitionAnonymousNumber.create(
+                petition, commenter, 2);
+        when(petitionRepository.findVisibleByIdForUpdate(10L))
+                .thenReturn(Optional.of(petition));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(commenter));
+        when(mappingRepository.findByPetitionIdAndUserId(10L, 2L))
+                .thenReturn(Optional.of(mapping));
+
+        transaction.create(2L, 10L, "comment");
+
+        verify(notificationEventService).onPetitionCommentCreated(any(Comment.class));
+        verify(notificationEventService, never()).onReplyCreated(any(Comment.class));
+    }
+
+    @Test
+    void replyTriggersReplyNotificationOnly() {
+        User writer = user(1L);
+        User commenter = user(2L);
+        Petition petition = petition(writer, PetitionStatus.OPEN, now.minusDays(1));
+        PetitionAnonymousNumber mapping = PetitionAnonymousNumber.create(
+                petition, commenter, 2);
+        Comment parent = Comment.create(petition, writer,
+                PetitionAnonymousNumber.create(petition, writer, 1), "root");
+        ReflectionTestUtils.setField(parent, "id", 11L);
+        when(petitionRepository.findVisibleByIdForUpdate(10L))
+                .thenReturn(Optional.of(petition));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(commenter));
+        when(mappingRepository.findByPetitionIdAndUserId(10L, 2L))
+                .thenReturn(Optional.of(mapping));
+        when(commentRepository.findByIdAndPetitionId(11L, 10L))
+                .thenReturn(Optional.of(parent));
+
+        transaction.create(2L, 10L, "reply", 11L);
+
+        verify(notificationEventService).onReplyCreated(any(Comment.class));
+        verify(notificationEventService, never()).onPetitionCommentCreated(any(Comment.class));
     }
 
     @Test

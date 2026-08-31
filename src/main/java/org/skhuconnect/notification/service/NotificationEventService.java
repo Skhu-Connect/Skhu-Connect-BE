@@ -57,6 +57,14 @@ public class NotificationEventService {
                 "comment:like:" + comment.getId() + ":" + actor.getId() + ":" + receiver.getId());
     }
 
+    public void onPetitionCommentCreated(Comment comment) {
+        if (comment.isReply()) return;
+        User receiver = comment.getPetition().getWriter();
+        if (receiver.getId().equals(comment.getWriter().getId())) return;
+        createOnce(receiver, PETITION_COMMENT_CREATED, comment.getPetition(), comment,
+                "petition:comment:" + comment.getPetition().getId() + ":" + comment.getId() + ":" + receiver.getId());
+    }
+
     public void onReplyCreated(Comment reply) {
         if (!reply.isReply()) return;
         User receiver = reply.getParentComment().getWriter();

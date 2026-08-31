@@ -138,6 +138,7 @@ Notification Entity, 조회·읽음 API와 주요 이벤트 연결이 `dev`에 �
 - `PETITION_AGREEMENT_100_PERCENT`: 청원 작성자
 - `PETITION_UNDER_REVIEW`: 작성자와 동의자, 작성자 중복 제외
 - `PETITION_ANSWERED`: 작성자와 동의자, 작성자 중복 제외
+- `PETITION_COMMENT_CREATED`: 청원 작성자
 - `COMMENT_REPLY`: 원댓글 작성자
 - `COMMENT_LIKE`: 원댓글 작성자
 - `REPLY_LIKE`: 대댓글 작성자
@@ -145,6 +146,8 @@ Notification Entity, 조회·읽음 API와 주요 이벤트 연결이 `dev`에 �
 공통 규칙:
 
 - 동일 이벤트·수신자는 최초 1회만 생성하고 `event_key` UNIQUE로 동시 중복도 막는다.
+- 청원 작성자가 아닌 사용자가 원댓글을 작성하면 청원 작성자에게 새 댓글 알림을 생성한다.
+- 대댓글은 새 댓글 알림 대상에서 제외하고 `COMMENT_REPLY` 정책을 따른다.
 - 자기 자신이 발생시킨 댓글·공감 알림은 생성하지 않는다.
 - `notification_enabled=false`이면 새 알림을 생성하지 않는다.
 - 알림 삭제는 없다.

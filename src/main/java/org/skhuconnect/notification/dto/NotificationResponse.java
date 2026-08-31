@@ -18,6 +18,7 @@ public record NotificationResponse(Long id, NotificationType type, String messag
             case PETITION_AGREEMENT_100_PERCENT -> "청원이 목표 동의 수를 달성했습니다.";
             case PETITION_UNDER_REVIEW -> "청원 검토가 시작되었습니다.";
             case PETITION_ANSWERED -> "청원에 공식 답변이 등록되었습니다.";
+            case PETITION_COMMENT_CREATED -> "내 청원에 새 댓글이 작성되었습니다.";
             case COMMENT_REPLY -> "내 댓글에 대댓글이 작성되었습니다.";
             case COMMENT_LIKE -> "내 댓글에 공감이 등록되었습니다.";
             case REPLY_LIKE -> "내 대댓글에 공감이 등록되었습니다.";
