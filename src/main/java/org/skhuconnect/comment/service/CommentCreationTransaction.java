@@ -67,8 +67,12 @@ public class CommentCreationTransaction {
         Comment parent = findParent(petitionId, parentCommentId);
         Comment comment = commentRepository.saveAndFlush(
                 Comment.create(petition, user, mapping, parent, content));
-        if (notificationEventService != null && comment.isReply()) {
-            notificationEventService.onReplyCreated(comment);
+        if (notificationEventService != null) {
+            if (comment.isReply()) {
+                notificationEventService.onReplyCreated(comment);
+            } else {
+                notificationEventService.onPetitionCommentCreated(comment);
+            }
         }
         return CommentResponse.from(comment, 0, userId, false);
     }

@@ -5,6 +5,7 @@ import org.skhuconnect.agreement.repository.AgreementRepository;
 import org.skhuconnect.agreement.entity.Agreement;
 import org.skhuconnect.comment.entity.*;
 import org.skhuconnect.notification.entity.Notification;
+import org.skhuconnect.notification.entity.NotificationType;
 import org.skhuconnect.notification.fcm.FcmPushService;
 import org.skhuconnect.notification.repository.NotificationRepository;
 import org.skhuconnect.petition.entity.Petition;
@@ -58,6 +59,26 @@ class NotificationEventServiceTest {
         verify(notifications,times(3)).saveAndFlush(any(Notification.class));
         service.onCommentLiked(root,owner);
         verify(notifications,times(3)).saveAndFlush(any(Notification.class));
+    }
+    @Test void petitionCommentNotifiesPetitionWriterButNotSelfOrReply() {
+        User writer=user(1L), actor=user(2L); Petition petition=mock(Petition.class);
+        when(petition.getId()).thenReturn(10L); when(petition.getWriter()).thenReturn(writer);
+        PetitionAnonymousNumber writerMap=PetitionAnonymousNumber.create(petition,writer,1);
+        PetitionAnonymousNumber actorMap=PetitionAnonymousNumber.create(petition,actor,2);
+        Comment comment=Comment.create(petition,actor,actorMap,"comment"); ReflectionTestUtils.setField(comment,"id",20L);
+
+        service.onPetitionCommentCreated(comment);
+
+        verify(notifications).saveAndFlush(argThat(notification ->
+                notification.getType()==NotificationType.PETITION_COMMENT_CREATED
+                        && notification.getReceiver()==writer
+                        && notification.getPetition()==petition
+                        && notification.getComment()==comment));
+
+        Comment selfComment=Comment.create(petition,writer,writerMap,"self"); ReflectionTestUtils.setField(selfComment,"id",21L);
+        Comment reply=Comment.create(petition,actor,actorMap,comment,"reply"); ReflectionTestUtils.setField(reply,"id",22L);
+        service.onPetitionCommentCreated(selfComment); service.onPetitionCommentCreated(reply);
+        verify(notifications,times(1)).saveAndFlush(any(Notification.class));
     }
     @Test void disabledReceiverDoesNotReceiveNotification() {
         User writer=user(1L);

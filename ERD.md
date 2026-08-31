@@ -1303,9 +1303,11 @@ Codex는 다음 원칙을 따른다.
 - 대댓글은 원댓글과 같은 `PetitionAnonymousNumber` 체계를 사용한다. 기존 매핑은 재사용하고 최초 활동 사용자는 기존 발급 정책으로 새 매핑을 발급한다.
 ## 사용자 알림 확정 정책
 
-- 유형은 `PETITION_AGREEMENT_60_PERCENT`, `PETITION_AGREEMENT_100_PERCENT`, `PETITION_UNDER_REVIEW`, `PETITION_ANSWERED`, `COMMENT_REPLY`, `COMMENT_LIKE`, `REPLY_LIKE`이다.
+- 유형은 `PETITION_AGREEMENT_60_PERCENT`, `PETITION_AGREEMENT_100_PERCENT`, `PETITION_UNDER_REVIEW`, `PETITION_ANSWERED`, `PETITION_COMMENT_CREATED`, `COMMENT_REPLY`, `COMMENT_LIKE`, `REPLY_LIKE`이다.
 - 청원 작성자는 60%, 100%, 검토 시작, 공식 답변 알림을 받는다.
 - 청원 동의자는 검토 시작과 공식 답변 알림을 받되 작성자는 중복 수신하지 않는다.
+- 청원 작성자가 아닌 사용자가 원댓글을 작성하면 청원 작성자는 새 댓글 알림을 받는다.
+- 대댓글은 새 댓글 알림 대상에서 제외하고 대댓글 알림 정책을 따른다.
 - 원댓글 작성자는 대댓글과 원댓글 공감 알림을, 대댓글 작성자는 대댓글 공감 알림을 받는다.
 - 자기 이벤트와 `notification_enabled=false` 수신자에게는 생성하지 않는다.
 - `event_key`로 이벤트별·수신자별 최초 1회 생성을 보장한다.
