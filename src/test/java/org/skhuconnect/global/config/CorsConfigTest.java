@@ -19,6 +19,7 @@ class CorsConfigTest {
         assertThat(configuration.getAllowedOrigins())
                 .containsExactly(
                         "https://petition-system-two.vercel.app",
+                        "https://seokhwan.store",
                         "http://localhost:5173"
                 );
         assertThat(configuration.getAllowedMethods())
