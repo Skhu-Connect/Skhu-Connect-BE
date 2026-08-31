@@ -30,7 +30,7 @@ class AccessTokenAuthenticationFilterTest {
     void setUp() {
         jwtDecoder = mock(JwtDecoder.class);
         users = mock(org.skhuconnect.user.repository.UserRepository.class);
-        when(users.existsByIdAndDeletedFalse(org.mockito.ArgumentMatchers.anyLong())).thenReturn(true);
+        when(users.existsByIdAndDeletedFalseAndLoginBannedFalse(org.mockito.ArgumentMatchers.anyLong())).thenReturn(true);
         filter = new AccessTokenAuthenticationFilter(jwtDecoder, users);
         filterChain = mock(FilterChain.class);
     }
@@ -277,15 +277,20 @@ class AccessTokenAuthenticationFilterTest {
     }
 
     @Test
-    void userDepartmentPatchRequiresToken() throws Exception {
-        MockHttpServletRequest request = new MockHttpServletRequest(
-                "PATCH", "/connect/users/me/department");
-        MockHttpServletResponse response = new MockHttpServletResponse();
+    void userPatchApisRequireToken() throws Exception {
+        for (String path : List.of(
+                "/connect/users/me/department",
+                "/connect/users/me/notification-settings",
+                "/connect/users/me/login-id",
+                "/connect/users/me/password")) {
+            MockHttpServletRequest request = new MockHttpServletRequest("PATCH", path);
+            MockHttpServletResponse response = new MockHttpServletResponse();
 
-        filter.doFilter(request, response, filterChain);
+            filter.doFilter(request, response, filterChain);
 
-        assertThat(response.getStatus()).isEqualTo(401);
-        verify(filterChain, never()).doFilter(request, response);
+            assertThat(response.getStatus()).isEqualTo(401);
+            verify(filterChain, never()).doFilter(request, response);
+        }
     }
     @Test
     void validUserTokenInjectsUserIdIntoUserActivityRequest() throws Exception {
@@ -336,7 +341,7 @@ class AccessTokenAuthenticationFilterTest {
         request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer withdrawn-token");
         MockHttpServletResponse response = new MockHttpServletResponse();
         when(jwtDecoder.decode("withdrawn-token")).thenReturn(userJwt("42", "USER"));
-        when(users.existsByIdAndDeletedFalse(42L)).thenReturn(false);
+        when(users.existsByIdAndDeletedFalseAndLoginBannedFalse(42L)).thenReturn(false);
 
         filter.doFilter(request, response, filterChain);
 

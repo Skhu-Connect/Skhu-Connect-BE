@@ -31,6 +31,19 @@ public interface PetitionRepository extends JpaRepository<Petition, Long>,
 
     Optional<Petition> findByIdAndDeletedFalseAndHiddenFalse(Long id);
 
+    /**
+     * 작성자의 수정·삭제용 조회. 동의·댓글 등록이 같은 행을 PESSIMISTIC_WRITE 로 잠그므로
+     * 여기서도 같은 잠금을 잡아야 한다. 잠금 없이 읽으면 "동의 0건일 때만 수정·삭제" 규칙이
+     * 동시 요청에서 뚫리고, 전 컬럼 UPDATE 가 방금 증가한 agreement_count 를 되돌린다.
+     * 숨김 청원은 여기서 걸러내지 않는다 - 404 가 아니라 409(수정 불가)로 답해야 한다.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select petition from Petition petition
+            where petition.id = :id and petition.deleted = false
+            """)
+    Optional<Petition> findByIdAndDeletedFalseForUpdate(@Param("id") Long id);
+
     @Query("""
             select petition from Petition petition
             where petition.id = :petitionId and petition.deleted = false and petition.hidden = false

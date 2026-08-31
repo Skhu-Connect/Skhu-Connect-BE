@@ -158,7 +158,7 @@ public class EmailVerificationService {
         if (purpose == EmailVerificationPurpose.SIGN_UP && exists) {
             throw error(Reason.EMAIL_ALREADY_REGISTERED);
         }
-        if (purpose == EmailVerificationPurpose.PASSWORD_RESET && !exists) {
+        if (purpose != EmailVerificationPurpose.SIGN_UP && !exists) {
             throw error(Reason.EMAIL_NOT_REGISTERED);
         }
     }

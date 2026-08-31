@@ -14,6 +14,7 @@ import org.hibernate.annotations.ColumnDefault;
 import org.junit.jupiter.api.Test;
 import org.skhuconnect.department.entity.Department;
 import org.skhuconnect.global.entity.BaseEntity;
+import org.skhuconnect.notification.entity.NotificationPoint;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -43,7 +44,13 @@ class UserTest {
         assertColumn("email", String.class, "email", 255, false);
         assertColumn("loginId", String.class, "login_id", 50, false);
         assertColumn("password", String.class, "password", 255, false);
-        assertNotificationColumn();
+        assertNotificationColumn("notificationEnabled", "notification_enabled");
+        assertNotificationColumn("notifyAgreement", "notify_agreement");
+        assertNotificationColumn("notifyAnswer", "notify_answer");
+        assertNotificationColumn("notifyReply", "notify_reply");
+        assertNotificationColumn("notifyLike", "notify_like");
+        assertNotificationColumn("notifyNotice", "notify_notice");
+        assertNotificationColumn("notifyReport", "notify_report");
         assertDepartmentMapping();
         assertIndexes(table.indexes());
     }
@@ -75,6 +82,12 @@ class UserTest {
         assertThat(user.getPassword()).isEqualTo("encoded-password");
         assertThat(user.getDepartment()).isSameAs(department);
         assertThat(user.isNotificationEnabled()).isTrue();
+        assertThat(user.isNotifyAgreement()).isTrue();
+        assertThat(user.isNotifyAnswer()).isTrue();
+        assertThat(user.isNotifyReply()).isTrue();
+        assertThat(user.isNotifyLike()).isTrue();
+        assertThat(user.isNotifyNotice()).isTrue();
+        assertThat(user.isNotifyReport()).isTrue();
     }
 
     @Test
@@ -89,12 +102,36 @@ class UserTest {
         );
 
         user.changePassword("changed-encoded-password");
+        user.changeLoginId("changed-login-id");
         user.changeDepartment(changedDepartment);
         user.changeNotificationEnabled(false);
+        user.changeNotificationSettings(null, null, null, false, null, false);
 
         assertThat(user.getPassword()).isEqualTo("changed-encoded-password");
+        assertThat(user.getLoginId()).isEqualTo("changed-login-id");
         assertThat(user.getDepartment()).isSameAs(changedDepartment);
         assertThat(user.isNotificationEnabled()).isFalse();
+        assertThat(user.allows(NotificationPoint.AGREEMENT)).isTrue();
+        assertThat(user.allows(NotificationPoint.ANSWER)).isTrue();
+        assertThat(user.allows(NotificationPoint.REPLY)).isTrue();
+        assertThat(user.allows(NotificationPoint.LIKE)).isFalse();
+        assertThat(user.allows(NotificationPoint.NOTICE)).isTrue();
+        assertThat(user.allows(NotificationPoint.REPORT)).isFalse();
+    }
+
+    @Test
+    void banLoginSetsStateAndRejectsDoubleBan() {
+        Department department = Department.create("SOFTWARE", "소프트웨어융합학부");
+        User user = User.create("student@office.skhu.ac.kr", "student", "encoded-password", department);
+        org.skhuconnect.admin.entity.Admin admin = org.skhuconnect.admin.entity.Admin.create("admin", "encoded");
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+
+        assertThat(user.isLoginBanned()).isFalse();
+        user.banLogin("반복적인 욕설 신고", admin, now);
+        assertThat(user.isLoginBanned()).isTrue();
+        assertThat(user.getLoginBanReason()).isEqualTo("반복적인 욕설 신고");
+        assertThat(org.assertj.core.api.Assertions.catchThrowable(() -> user.banLogin("again", admin, now)))
+                .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
@@ -138,6 +175,7 @@ class UserTest {
         );
 
         assertThatNullPointerException().isThrownBy(() -> user.changePassword(null));
+        assertThatNullPointerException().isThrownBy(() -> user.changeLoginId(null));
         assertThatNullPointerException().isThrownBy(() -> user.changeDepartment(null));
     }
 
@@ -159,13 +197,16 @@ class UserTest {
         assertThat(column.unique()).isEqualTo(unique);
     }
 
-    private void assertNotificationColumn() throws NoSuchFieldException {
-        Field field = User.class.getDeclaredField("notificationEnabled");
+    private void assertNotificationColumn(
+            String fieldName,
+            String columnName
+    ) throws NoSuchFieldException {
+        Field field = User.class.getDeclaredField(fieldName);
         Column column = field.getAnnotation(Column.class);
 
         assertThat(field.getType()).isEqualTo(boolean.class);
         assertThat(column).isNotNull();
-        assertThat(column.name()).isEqualTo("notification_enabled");
+        assertThat(column.name()).isEqualTo(columnName);
         assertThat(column.nullable()).isFalse();
         assertThat(field.getAnnotation(ColumnDefault.class).value()).isEqualTo("true");
     }

@@ -1,6 +1,6 @@
 # SKHU Connect ERD
 
-> Last Updated: 2026-08-06
+> Last Updated: 2026-08-27
 >
 > 본 문서는 SKHU Connect 백엔드의 MVP 데이터베이스 설계 기준이다.
 > Entity 구현과 데이터베이스 변경은 `ARCHITECTURE.md`, API 명세서, 본 문서를 기준으로 진행한다.
@@ -182,6 +182,16 @@ users
 | `password` | `VARCHAR(255)` | 불가 |  | BCrypt 암호화 비밀번호 |
 | `department_id` | `BIGINT` | 불가 | FK | 사용자가 선택한 학과 |
 | `notification_enabled` | `BOOLEAN` | 불가 | DEFAULT TRUE | 전체 웹 알림 활성화 여부 |
+| `notify_agreement` | `BOOLEAN` | 불가 | DEFAULT TRUE | 공감 도달 알림 활성화 여부 |
+| `notify_answer` | `BOOLEAN` | 불가 | DEFAULT TRUE | 답변 등록 알림 활성화 여부 |
+| `notify_reply` | `BOOLEAN` | 불가 | DEFAULT TRUE | 답글 알림 활성화 여부 |
+| `notify_like` | `BOOLEAN` | 불가 | DEFAULT TRUE | 댓글·답글 공감 알림 활성화 여부 |
+| `notify_notice` | `BOOLEAN` | 불가 | DEFAULT TRUE | 공지사항 알림 활성화 여부 |
+| `notify_report` | `BOOLEAN` | 불가 | DEFAULT TRUE | 신고 처리 결과·조치 알림 활성화 여부 |
+| `login_banned` | `BOOLEAN` | 불가 | DEFAULT FALSE | 로그인 정지 여부 |
+| `login_ban_reason` | `VARCHAR(500)` | 가능 |  | 로그인 정지 사유 |
+| `login_banned_at` | `DATETIME(6)` | 가능 |  | 로그인 정지 처리 시각 |
+| `login_banned_by_admin_id` | `BIGINT` | 가능 | FK | 로그인 정지 처리 관리자 |
 | `created_at` | `DATETIME(6)` | 불가 |  | 가입 시각 |
 | `updated_at` | `DATETIME(6)` | 불가 |  | 수정 시각 |
 
@@ -214,6 +224,7 @@ FOREIGN KEY(department_id) REFERENCES departments(id)
 - 학교 계정 비밀번호는 저장하지 않는다.
 - 비밀번호는 BCrypt 해시만 저장한다.
 - 사용자 실제 ID와 이메일은 일반 사용자 API에 반환하지 않는다.
+- 로그인 정지 계정은 아이디·비밀번호가 맞아도 로그인할 수 없다(403). 정지 사유는 비밀번호 검증을 통과한 요청에만 노출한다 - 계정 존재 여부로 학번을 무차별 대입하는 경로를 막기 위해서다.
 
 ---
 
@@ -233,7 +244,7 @@ email_verifications
 |---|---|---:|---|---|
 | id | BIGINT | 불가 | PK, AUTO_INCREMENT | 이메일 인증 식별자 |
 | email | VARCHAR(255) | 불가 | 복합 UNIQUE | 정규화된 성공회대 공식 이메일 |
-| purpose | VARCHAR(30) | 불가 | 복합 UNIQUE | SIGN_UP 또는 PASSWORD_RESET |
+| purpose | VARCHAR(30) | 불가 | 복합 UNIQUE | SIGN_UP, PASSWORD_RESET 또는 LOGIN_ID_FIND |
 | code_hash | VARCHAR(64) | 불가 |  | salt를 포함해 계산한 SHA-256 해시 |
 | code_salt | VARCHAR(64) | 불가 |  | 인증 레코드별 random salt |
 | code_expires_at | DATETIME(6) | 불가 |  | 인증번호 만료 시각 |
@@ -268,7 +279,7 @@ UNIQUE INDEX ux_email_verifications_token_hash (token_hash)
 - 인증번호 원문은 저장하지 않고 record별 salt를 포함한 SHA-256 해시만 저장한다.
 - 인증 성공 시 30분간 유효한 일회용 verificationToken을 발급한다.
 - verificationToken 원문은 저장하지 않고 SHA-256 해시만 저장한다.
-- 목적은 SIGN_UP과 PASSWORD_RESET으로 구분하며 다른 목적에 재사용할 수 없다.
+- 목적은 SIGN_UP, PASSWORD_RESET, LOGIN_ID_FIND로 구분하며 다른 목적에 재사용할 수 없다.
 - 사용된 token과 만료된 인증번호 또는 token은 재사용할 수 없다.
 - 이메일 인증 저장에 Redis를 사용하지 않는다.
 
@@ -794,7 +805,7 @@ notifications
 | `receiver_id` | `BIGINT` | 불가 | FK | 알림 수신 사용자 |
 | `petition_id` | `BIGINT` | 가능 | FK | 관련 청원 |
 | `comment_id` | `BIGINT` | 가능 | FK | 관련 댓글 또는 대댓글 |
-| `type` | `VARCHAR(50)` | 불가 |  | 사용자 알림 유형 |
+| `type` | `VARCHAR(50)` | 불가 |  | 사용자 알림 유형. Entity 에서 `NotificationType` enum 이 아니라 String 으로 매핑한다 - DB 에 CHECK 제약을 두지 않는다(2026-08-30 사고, 26절) |
 | `event_key` | `VARCHAR(150)` | 불가 | UNIQUE | 동일 이벤트 중복 방지 키 |
 | `is_read` | `BOOLEAN` | 불가 | DEFAULT FALSE | 읽음 여부 |
 | `read_at` | `DATETIME(6)` | 가능 |  | 읽은 시각 |
@@ -825,7 +836,7 @@ UNIQUE(event_key)
 - 전체 읽음 처리 시 사용자의 읽지 않은 알림을 모두 변경한다.
 - 읽은 알림도 목록에서 유지한다.
 - 웹 브라우저 Push 알림은 MVP에서 제외한다.
-- `notification_enabled=false`인 사용자에게는 새 알림을 생성하지 않는다.
+- `notification_enabled=false`인 사용자와 해당 알림 종류 설정을 끈 사용자에게는 새 알림을 생성하지 않는다.
 
 사용자 알림 유형과 수신 대상은 본 문서의 사용자 알림 확정 정책을 따른다.
 
@@ -1225,7 +1236,7 @@ POST /connect/auth/email-verifications/confirm
 - 인증 실패는 최대 5회이며 재전송 시 기존 인증 상태를 갱신한다.
 - 인증 성공 시 30분간 유효한 일회용 verificationToken을 발급한다.
 - verificationToken 원문 대신 SHA-256 tokenHash를 저장한다.
-- SIGN_UP과 PASSWORD_RESET 목적을 구분한다.
+- SIGN_UP, PASSWORD_RESET, LOGIN_ID_FIND 목적을 구분한다.
 - Redis는 사용하지 않는다.
 
 실제 SMTP 제공자는 아직 확정되지 않았다.
@@ -1303,13 +1314,14 @@ Codex는 다음 원칙을 따른다.
 - 대댓글은 원댓글과 같은 `PetitionAnonymousNumber` 체계를 사용한다. 기존 매핑은 재사용하고 최초 활동 사용자는 기존 발급 정책으로 새 매핑을 발급한다.
 ## 사용자 알림 확정 정책
 
-- 유형은 `PETITION_AGREEMENT_60_PERCENT`, `PETITION_AGREEMENT_100_PERCENT`, `PETITION_UNDER_REVIEW`, `PETITION_ANSWERED`, `PETITION_COMMENT_CREATED`, `COMMENT_REPLY`, `COMMENT_LIKE`, `REPLY_LIKE`이다.
+- 유형은 `PETITION_AGREEMENT_60_PERCENT`, `PETITION_AGREEMENT_100_PERCENT`, `PETITION_UNDER_REVIEW`, `PETITION_ANSWERED`, `PETITION_COMMENT_CREATED`, `COMMENT_REPLY`, `COMMENT_LIKE`, `REPLY_LIKE`, `NOTICE`이다.
+- 유형은 각각 `AGREEMENT`, `ANSWER`, `REPLY`, `LIKE`, `NOTICE` 포인트에 속하며 User의 종류별 설정을 공통 생성 게이트에서 검사한다.
 - 청원 작성자는 60%, 100%, 검토 시작, 공식 답변 알림을 받는다.
 - 청원 동의자는 검토 시작과 공식 답변 알림을 받되 작성자는 중복 수신하지 않는다.
 - 청원 작성자가 아닌 사용자가 원댓글을 작성하면 청원 작성자는 새 댓글 알림을 받는다.
 - 대댓글은 새 댓글 알림 대상에서 제외하고 대댓글 알림 정책을 따른다.
 - 원댓글 작성자는 대댓글과 원댓글 공감 알림을, 대댓글 작성자는 대댓글 공감 알림을 받는다.
-- 자기 이벤트와 `notification_enabled=false` 수신자에게는 생성하지 않는다.
+- 자기 이벤트, `notification_enabled=false` 수신자, 해당 종류 설정을 끈 수신자에게는 생성하지 않는다.
 - `event_key`로 이벤트별·수신자별 최초 1회 생성을 보장한다.
 - 알림은 삭제하지 않으며 개별·전체 읽음, 최신순 목록, 읽지 않은 개수 조회를 지원한다.
 ## NotificationLog implementation decisions
@@ -1323,7 +1335,11 @@ Codex는 다음 원칙을 따른다.
 
 ## Report
 
-신고 대상은 청원·댓글·대댓글이며, 동일 사용자·동일 대상 조합은 한 번만 신고한다. 신고 상태는 PENDING, DISMISSED, ACTION_TAKEN을 사용하고 신고 유형·상세 사유·처리 관리자·처리 시각·처리 사유를 기록한다. ACTION_TAKEN은 기존 콘텐츠 hidden 정책을 재사용하며, 이미 숨김인 콘텐츠의 숨김 이력은 덮어쓰지 않는다.
+신고 대상은 청원·댓글·대댓글이며, 동일 사용자·동일 대상 조합은 한 번만 신고한다. 신고 상태는 PENDING, DISMISSED, ACTION_TAKEN을 사용하고 신고 유형·상세 사유·처리 관리자·처리 시각·처리 사유를 기록한다.
+
+ACTION_TAKEN 처리 시 관리자가 조치 종류(`action_type` 컬럼, `VARCHAR`, `HIDE` 또는 `USER_LOGIN_BAN`)를 선택한다. `HIDE`는 기존 콘텐츠 hidden 정책을 재사용하며, 이미 숨김이거나 작성자가 삭제한 콘텐츠의 이력은 덮어쓰지 않는다. `USER_LOGIN_BAN`은 대상 작성자 계정을 로그인 정지 처리한다(User 6절) - 대상이 삭제된 콘텐츠여도 정지는 걸린다. `action_type`은 `DISMISSED`일 때 항상 NULL이다.
+
+처리 결과는 신고자에게(`REPORT_DISMISSED`/`REPORT_ACTION_TAKEN`), ACTION_TAKEN이면 대상 작성자에게도(`CONTENT_HIDDEN`/`ACCOUNT_LOGIN_BANNED`) Notification으로 통지한다(14절).
 
 ## Notice
 
@@ -1390,3 +1406,53 @@ user_blocks
 | `updated_at` | `DATETIME(6)` | 불가 |  | BaseEntity 수정 시각 |
 
 `UNIQUE(blocker_id, blocked_user_id)`로 중복 차단을 방지한다. 탈퇴 작성자의 기존 콘텐츠도 해당 기존 User ID 기준으로 차단할 수 있지만, 같은 이메일로 재가입한 새 User ID에는 자동 승계되지 않는다. 차단 해제는 제공하지 않으며, 로그인 사용자의 청원·댓글 조회 쿼리는 `NOT EXISTS user_blocks` 조건으로 차단 작성자를 제외한다.
+
+---
+
+# 26. enum 컬럼 추가 시 DB CHECK 제약 주의사항
+
+2026-08-30, 신고 알림 4종(`REPORT_DISMISSED`, `REPORT_ACTION_TAKEN`, `CONTENT_HIDDEN`,
+`ACCOUNT_LOGIN_BANNED`) 추가 배포 직후 관리자 신고 처리가 전부 500으로 막힌 사고가 있었다.
+
+## 원인
+
+Hibernate 6+ 는 `@Enumerated(EnumType.STRING)`로 매핑된 컬럼(또는 `AttributeConverter` 로
+변환해도 마찬가지)에 그 시점 자바 enum 값 목록으로 DB `CHECK` 제약을 자동 생성한다.
+`notifications.type` 컬럼에 걸린 `notifications_chk_1` 제약이 이렇게 만들어졌다.
+
+`spring.jpa.hibernate.ddl-auto=update` 는 새 컬럼·테이블은 추가하지만 **기존 CHECK 제약은
+절대 갱신하지 않는다.** `NotificationType` 에 값 4개를 추가해도 이미 배포된 DB의 CHECK 제약은
+예전 값 목록에 그대로 묶여 있었다.
+
+새 값으로 INSERT를 시도하면 CHECK 위반으로 `DataIntegrityViolationException` 이 나는데,
+`NotificationEventService.createOnce()` 가 이걸 "동시 중복 event_key" 로 착각해 조용히
+삼켰다. 하지만 Spring 트랜잭션은 예외가 내부 프록시 경계를 통과하는 순간 이미
+rollback-only 로 표시되므로, 캐치해서 무시해도 소용없다 - 메서드는 정상 종료된 것처럼
+보이지만 최종 커밋 시점에 `UnexpectedRollbackException` 으로 500이 났다. `ddl-auto=update`
+는 fresh 스키마를 매번 새로 만드는 로컬 H2 테스트로는 절대 재현되지 않는다(현재 enum
+값으로 CHECK 를 다시 만들어버리기 때문).
+
+## 조치
+
+- `Notification.type` 을 `NotificationType` 이 아니라 내부적으로 `String` 필드(`typeName`)로
+  매핑했다. `getType()` 이 `NotificationType.valueOf()` 로 변환한다. Hibernate 가 이 컬럼을
+  enum 이 아니라 순수 String 으로 보게 해서 자동 CHECK 생성 로직을 아예 안 탄다.
+- 이미 배포된 프로덕션 DB의 낡은 CHECK 제약은 코드 수정만으로 없어지지 않는다.
+  `ALTER TABLE notifications DROP CHECK notifications_chk_1;` 를 프로덕션에 1회 수동
+  실행해야 한다.
+
+## 앞으로 지킬 규칙
+
+**DB 컬럼에 매핑되는 enum(`ReportStatus`, `ReportTargetType`, `PetitionCategory`,
+`PetitionStatus` 등)에 새 값을 추가할 때마다, 배포 전 다음을 확인한다:**
+
+1. 그 컬럼이 `@Enumerated`(또는 컨버터)로 매핑돼 있으면 십중팔구 DB에 CHECK 제약이 걸려
+   있다. `SHOW CREATE TABLE <table>;` 로 확인한다.
+2. CHECK 제약이 있으면 배포 전에 `ALTER TABLE ... DROP CHECK ...`(필요하면 새 값을 포함한
+   CHECK 로 재생성)를 프로덕션에 수동 실행할 계획을 먼저 세운다. `ddl-auto=update` 가
+   대신 해주지 않는다.
+3. 자주 값이 늘어나는 enum(알림 종류처럼)은 `Notification.type` 과 같은 방식으로 애초에
+   String 필드로 매핑해 이 문제 자체를 피하는 것을 검토한다.
+4. 네이티브 MySQL `ENUM` 타입으로 매핑된 컬럼(`Report.status`, `Report.targetType` 등,
+   `@JdbcTypeCode(SqlTypes.VARCHAR)` 를 안 붙인 경우)은 CHECK 제약과 별개로 같은 종류의
+   문제를 갖는다 - `ddl-auto=update` 가 기존 네이티브 ENUM 의 값 목록도 넓혀주지 않는다.

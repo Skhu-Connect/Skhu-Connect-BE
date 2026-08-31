@@ -29,6 +29,7 @@ JWT_SECRET
 ```text
 JWT_COOKIE_SECURE (기본 false)
 PORT (기본 8080)
+FIREBASE_SERVICE_ACCOUNT_JSON (미설정 시 FCM 푸시 발송만 비활성화)
 ```
 
 `JWT_SECRET`은 Base64로 인코딩된 256-bit 이상의 HS256 키여야 합니다. 비밀값은 저장소에 기록하지 않습니다.
@@ -54,6 +55,7 @@ PORT (기본 8080)
 | 이메일 인증 발송·확인 | `POST /connect/auth/email-verifications`, `/confirm` | 불필요 | 204, 200 |
 | 회원가입 | `POST /connect/auth/signup` | 불필요 | 201 |
 | 로그인·재발급·로그아웃 | `POST /connect/auth/login`, `/token/refresh`, `/logout` | Refresh는 Cookie | 200, 204 |
+| 아이디 찾기 | `POST /connect/auth/login-id/find/email`, `/password` | 불필요 | 200 |
 | 비밀번호 재설정 | `POST /connect/auth/password/reset` | 인증 토큰 | 204 |
 | 학과 목록 | `GET /connect/departments` | 불필요 | 200 |
 | 청원 등록·목록·상세·수정·삭제 | `/connect/petitions` | 목록·상세만 공개 | 200, 201, 204 |
@@ -61,7 +63,8 @@ PORT (기본 8080)
 | 북마크 등록·취소·내 목록 | `/connect/petitions/{petitionId}/bookmarks`, `/connect/petitions/bookmarks` | 필요 | 200, 201, 204 |
 | 댓글·대댓글·공감 | `/connect/petitions/{petitionId}/comments/**` | 목록만 공개 | 200, 201, 204 |
 | 알림 목록·미읽음·읽음 처리 | `/connect/notifications/**` | 필요 | 200, 204 |
-| 내 정보·활동 내역 | `/connect/users/me/**` | 필요 | 200 |
+| 내 정보·활동 내역·알림 설정 | `/connect/users/me/**` | 필요 | 200 |
+| 내 아이디·비밀번호 변경 | `PATCH /connect/users/me/login-id`, `/password` | 필요 | 200, 204 |
 | 사용자 영구 차단 | `POST /connect/users/me/blocks` | 필요 | 201 |
 
 공통 오류 응답은 Problem Detail 형식이다. 요청 검증 실패는 400, Access Token 누락·위조·만료·잘못된 role은 401, 작성자 권한 위반은 403, 존재하지 않거나 사용자에게 노출할 수 없는 데이터는 404, 중복 참여 또는 허용되지 않는 상태 충돌은 409를 사용한다. 인증 도메인의 만료 상태는 해당 Controller의 Swagger 명세를 따른다.
@@ -88,18 +91,20 @@ org.skhuconnect
 
 - 학교 이메일 인증, 회원가입, BCrypt 비밀번호 저장
 - JWT Access Token, Refresh Token 회전·재발급·로그아웃
+- 이메일 인증 또는 현재 비밀번호를 이용한 아이디 찾기
 - 비밀번호 재설정
+- 로그인 상태의 아이디·비밀번호 변경
 - 청원 CRUD·검색·상세·논리 삭제 및 OPEN/EXPIRED 유효 상태 계산
 - 동의·취소, 중복 방지, 임계치 달성 시 `UNDER_REVIEW` 전환
 - 북마크 등록·취소·내 목록
 - 댓글·대댓글·공감, 청원별 영구 익명 번호
-- 알림 생성·목록·미읽음 개수·개별/전체 읽음 처리
+- 알림 생성·목록·미읽음 개수·개별/전체 읽음 처리·종류별 수신 설정
 - 로그인 사용자의 정보, 작성 청원·동의 청원·북마크 청원·작성 댓글·알림 조회
 - 관리자 전용 인증, 임계치 조회·수정, 청원·댓글 숨김·복구, 공식 답변 등록·수정·조회, 운영 로그 조회
 - 사용자 청원 상세의 공식 답변 조회
 - Controller/MVC, Service, Entity, Repository/JPA, 인증, 동시성 및 트랜잭션 테스트
 
-사용자 활동 조회는 JWT의 `userId`만 사용한다. 활동 목록에서는 hidden/deleted 청원과 삭제 댓글을 제외하며, 숨김 댓글은 기존 댓글 노출 정책을 재사용한다. 사용자 정보 응답은 현재 코드상 이메일, 로그인 ID, 학과 코드·이름, 알림 수신 여부를 반환하며 DB PK와 비밀번호는 반환하지 않는다.
+사용자 활동 조회는 JWT의 `userId`만 사용한다. 활동 목록에서는 hidden/deleted 청원과 삭제 댓글을 제외하며, 숨김 댓글은 기존 댓글 노출 정책을 재사용한다. 사용자 정보 응답은 이메일, 로그인 ID, 학과 코드·이름, 전체 및 종류별 알림 수신 여부를 반환하며 DB PK와 비밀번호는 반환하지 않는다. 종류별 설정은 `PATCH /connect/users/me/notification-settings`로 부분 갱신한다.
 
 ## 테스트 현황
 
@@ -112,7 +117,6 @@ org.skhuconnect
 
 ## 미구현·후속 범위
 
-- 알림 수신 설정 변경 API(`notification_enabled` 저장과 생성 차단 정책은 구현됨)
 - 브라우저 Push 알림
 
 ## 배포

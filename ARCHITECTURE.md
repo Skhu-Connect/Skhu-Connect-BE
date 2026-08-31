@@ -1,7 +1,7 @@
 # SKHU Connect Architecture
 
-> Last Updated: 2026-08-11
-> 기준: 로컬 `main` 커밋 `670d084`, 로컬 `dev` 커밋 `903716c`; 두 브랜치의 코드 트리 동일
+> Last Updated: 2026-08-27
+> 기준: `fix/#57` 브랜치의 알림 종류별 설정 API 구현
 
 ## 1. 서비스와 현재 상태
 
@@ -12,6 +12,7 @@ SKHU Connect는 성공회대학교 학생 청원 플랫폼이다. 학생은 학�
 - 공통 JPA·환경변수·Swagger
 - Department 목록
 - User, 이메일 인증, 회원가입, 로그인, JWT 재발급·로그아웃, 비밀번호 재설정
+- 이메일 인증·현재 비밀번호 기반 아이디 찾기와 로그인 상태의 아이디·비밀번호 변경
 - ThresholdSetting 기본 도메인
 - Petition CRUD·목록·검색·상세
 - Agreement 등록·취소와 상태 전환
@@ -27,7 +28,7 @@ SKHU Connect는 성공회대학교 학생 청원 플랫폼이다. 학생은 학�
 
 ### 미구현·후속 범위
 
-알림 수신 설정 변경 API와 브라우저 Push 알림이 남아 있다.
+브라우저 Push 알림이 남아 있다.
 
 ## 2. 기술 구조
 
@@ -50,7 +51,7 @@ Controller는 HTTP만 처리하고 Service가 정책·트랜잭션을 담당한�
 ## 3. 인증 정책
 
 - 학교 이메일: `@office.skhu.ac.kr`
-- 이메일 인증 목적: `SIGNUP`, `PASSWORD_RESET`
+- 이메일 인증 목적: `SIGN_UP`, `PASSWORD_RESET`, `LOGIN_ID_FIND`
 - 인증번호: 숫자 6자리, 5분, 최대 5회 실패, 60초 재전송 제한
 - 인증번호 원문은 저장하지 않고 salt 포함 SHA-256 해시를 저장한다.
 - 인증 성공 verificationToken은 30분, 1회 사용한다.
@@ -60,6 +61,8 @@ Controller는 HTTP만 처리하고 Service가 정책·트랜잭션을 담당한�
 - Refresh Token은 `refreshToken` HttpOnly, SameSite=Lax, Path=/connect/auth Cookie다.
 - 로그인·재발급 시 Refresh Token을 회전하고 로그아웃 시 삭제한다.
 - 인증 사용자 ID를 요청 본문으로 받지 않는다.
+- 아이디 찾기용 인증은 가입된 이메일에만 발송하고 `LOGIN_ID_FIND` 토큰을 한 번만 소비한다.
+- 로그인 상태의 아이디·비밀번호 변경은 사용자 행을 잠그고 현재 비밀번호를 재확인한다. 기존 Access Token, Refresh Token, FCM Token은 유지한다.
 - 공개 API: 학과, 청원 목록·상세, 댓글 목록. 댓글 목록은 토큰이 없을 때만 익명 통과하며 잘못된 토큰은 401이다.
 - 청원 변경, 동의, 북마크, 댓글 변경·공감, 알림 API는 Access Token 필수다.
 
@@ -74,9 +77,11 @@ OPEN --30일 내 미달성--> EXPIRED
 
 - 작성자는 동의 0인 OPEN 청원만 수정·논리 삭제할 수 있다.
 - 청원 등록 성공 후 10분 동안 같은 사용자의 새 청원 등록을 제한한다. 정확히 10분 후부터 허용하며, 논리 삭제된 청원도 최근 등록 시각 계산에 포함한다.
+- 쿨다운 429 응답은 남은 시간을 초 단위로 올림해 `retryAfterSeconds` 속성에 포함한다.
 - hidden/deleted 청원은 사용자 조회와 변경 기능에서 제외한다.
 - 동의 등록은 Petition 행을 `PESSIMISTIC_WRITE`로 잠근다.
 - `(petition_id,user_id)` UNIQUE로 중복 동의를 막는다.
+- 작성자는 자기 청원에 동의할 수 없다(409). 이 제한을 넣기 전에 이미 생긴 자기 동의는 그대로 두며, 취소(cancel)는 이후에도 제한 없이 허용한다 - 작성자가 스스로 취소해 동의 0건으로 되돌리는 것이 유일한 탈출구다.
 - 목표 달성 시 최초 한 번 `UNDER_REVIEW`와 `review_started_at`을 설정한다.
 - 청원 공개 조회는 기존 동작을 유지한다.
 - 청원 공유는 프론트의 기존 청원 상세 HTTPS URL을 사용하며, 백엔드는 기존 청원 상세·댓글 목록 API를 재사용한다.
@@ -142,6 +147,10 @@ Notification Entity, 조회·읽음 API와 주요 이벤트 연결이 `dev`에 �
 - `COMMENT_REPLY`: 원댓글 작성자
 - `COMMENT_LIKE`: 원댓글 작성자
 - `REPLY_LIKE`: 대댓글 작성자
+- `REPORT_DISMISSED`: 신고자 (신고가 기각됐을 때)
+- `REPORT_ACTION_TAKEN`: 신고자 (신고가 조치됐을 때, HIDE/USER_LOGIN_BAN 공통)
+- `CONTENT_HIDDEN`: 신고 대상 청원·댓글 작성자 (조치 종류가 HIDE일 때만)
+- `ACCOUNT_LOGIN_BANNED`: 신고 대상 작성자 (조치 종류가 USER_LOGIN_BAN일 때만)
 
 공통 규칙:
 
@@ -150,7 +159,10 @@ Notification Entity, 조회·읽음 API와 주요 이벤트 연결이 `dev`에 �
 - 대댓글은 새 댓글 알림 대상에서 제외하고 `COMMENT_REPLY` 정책을 따른다.
 - 자기 자신이 발생시킨 댓글·공감 알림은 생성하지 않는다.
 - `notification_enabled=false`이면 새 알림을 생성하지 않는다.
+- 알림 종류는 `AGREEMENT`, `ANSWER`, `REPLY`, `LIKE`, `NOTICE`, `REPORT` 포인트로 매핑하며, 사용자가 끈 포인트의 알림은 DB에 생성하지 않는다. `REPORT`는 신고 처리 결과 4종을 전부 묶는다 - 신고자용·피신고자용을 따로 끄고 켤 수 없다.
 - 알림 삭제는 없다.
+- 숨김·삭제된 청원을 가리키는 알림은 목록과 미읽음 개수에서 제외한다. 행 자체는 남기고 조회에서만 거른다. 청원과 무관한 `NOTICE`는 항상 노출한다. **`CONTENT_HIDDEN`·`ACCOUNT_LOGIN_BANNED`는 예외다** - 그 청원이 숨겨졌다는 사실 자체를 알리는 알림이라, 청원이 숨겨졌다고 알림까지 숨기면 안 된다(2026-08-30, 이 예외가 없어서 알림이 안 보이던 버그를 고쳤다).
+- `Notification.type` 컬럼은 DB에 enum CHECK 제약을 두지 않는다 - `ddl-auto=update`가 기존 CHECK를 안 갱신해서 나중에 알림 종류를 추가할 때마다 전체 알림 발송이 500으로 끊기는 장애가 났다(ERD.md 26절 참고). 앞으로 `NotificationType`에 값을 추가할 땐 이 문제가 재발하지 않는다 - 다만 다른 enum 컬럼(`ReportStatus` 등)에 값을 추가할 땐 ERD.md 26절의 확인 절차를 따른다.
 - 개별·전체 읽음은 멱등이고 `read_at`을 저장한다.
 - 최신순 `createdAt DESC,id DESC`, 미읽음 개수 API 제공
 - 클릭 이동을 위해 nullable `petition_id`, `comment_id` 저장
@@ -165,10 +177,20 @@ PATCH /connect/notifications/{notificationId}/read
 PATCH /connect/notifications/read-all
 ```
 
+푸시 발송:
+
+- 알림 저장 트랜잭션에서 `FcmPushService.PushMessage` 이벤트를 발행하고 커밋 이후(`AFTER_COMMIT`) 별도 스레드에서 FCM으로 보낸다. 롤백된 알림은 발송하지 않고 FCM 왕복이 API 응답을 지연시키지 않는다.
+- 이벤트는 트랜잭션 안에서 스냅샷한 값만 담는다. Open Session in View가 비활성이라 커밋 이후에는 Entity의 LAZY 연관을 참조할 수 없다.
+- 수신자의 `fcm_tokens`를 조회해 토큰마다 1건씩 보낸다. `UNREGISTERED`와 `INVALID_ARGUMENT`는 만료 토큰으로 보고 삭제하며 나머지 오류는 오류 코드와 함께 기록만 한다.
+- `FIREBASE_SERVICE_ACCOUNT_JSON`이 없거나 Firebase 초기화에 실패하면 기동 시 경고를 남기고 푸시만 비활성화한다. 알림 저장과 조회는 영향받지 않는다.
+- 토큰 값은 기기 자격증명이므로 로그에 남기지 않고 `tokenId`만 기록한다.
+
 ## 9.1 사용자 정보·활동 조회 정책
 
 - 모든 API는 Access Token이 필요하며 JWT `sub`에서 얻은 `userId`만 사용한다.
 - `GET /connect/users/me`는 이메일, 로그인 ID, 학과 코드·이름, 알림 수신 여부를 반환하고 DB PK와 비밀번호는 반환하지 않는다.
+- `GET /connect/users/me`의 `notificationSettings`는 `agreement`, `answer`, `reply`, `like`, `notice` 전체 상태를 반환한다.
+- `PATCH /connect/users/me/notification-settings`는 전달된 종류별 설정만 갱신하고 갱신 후 전체 상태를 반환한다. 빈 요청은 400이다.
 - `/connect/users/me/petitions`, `/agreements`, `/bookmarks`, `/comments`, `/notifications`는 본인 데이터만 조회한다.
 - 청원 활동은 hidden/deleted 청원을 제외하고 기존 `PetitionQueryResponse`의 유효 상태 계산을 재사용한다.
 - 댓글 활동은 삭제 댓글과 hidden/deleted 청원을 제외한다. 숨김 댓글은 기존 댓글 응답의 안내 문구 정책을 따른다.

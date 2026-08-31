@@ -17,6 +17,8 @@ import org.skhuconnect.petition.repository.PetitionRepository;
 import org.skhuconnect.user.dto.UserCommentPageResponse;
 import org.skhuconnect.user.dto.UserCommentResponse;
 import org.skhuconnect.user.dto.UserMeResponse;
+import org.skhuconnect.user.dto.NotificationSettingsResponse;
+import org.skhuconnect.user.dto.NotificationSettingsUpdateRequest;
 import org.skhuconnect.user.entity.User;
 import org.skhuconnect.user.exception.UserActivityException;
 import org.skhuconnect.user.repository.UserRepository;
@@ -74,6 +76,29 @@ public class UserActivityService {
                 .orElseThrow(() -> new UserActivityException(
                         UserActivityException.Reason.USER_NOT_FOUND));
         return UserMeResponse.from(user);
+    }
+
+    @Transactional
+    public NotificationSettingsResponse updateNotificationSettings(
+            Long userId,
+            NotificationSettingsUpdateRequest request
+    ) {
+        if (request.isEmpty()) {
+            throw new UserActivityException(
+                    UserActivityException.Reason.INVALID_NOTIFICATION_SETTINGS);
+        }
+        User user = userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new UserActivityException(
+                        UserActivityException.Reason.USER_NOT_FOUND));
+        user.changeNotificationSettings(
+                request.agreement(),
+                request.answer(),
+                request.reply(),
+                request.like(),
+                request.notice(),
+                request.report()
+        );
+        return NotificationSettingsResponse.from(user);
     }
 
     @Transactional(readOnly = true)

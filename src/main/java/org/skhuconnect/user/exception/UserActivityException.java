@@ -15,6 +15,12 @@ public class UserActivityException extends RuntimeException {
 
     public enum Reason {
         USER_NOT_FOUND("User not found"),
+        INVALID_ACCOUNT_REQUEST("Invalid account update request"),
+        CURRENT_PASSWORD_MISMATCH("Current password does not match"),
+        LOGIN_ID_UNCHANGED("New login ID must be different"),
+        LOGIN_ID_ALREADY_EXISTS("Login ID already exists"),
+        PASSWORD_UNCHANGED("New password must be different"),
+        INVALID_NOTIFICATION_SETTINGS("At least one notification setting is required"),
         INVALID_PAGE("Invalid user activity page request");
 
         private final String message;

@@ -7,7 +7,12 @@ import org.skhuconnect.notification.entity.*;
 import org.skhuconnect.notification.fcm.FcmPushService;
 import org.skhuconnect.notification.repository.NotificationRepository;
 import org.skhuconnect.petition.entity.Petition;
+import org.skhuconnect.report.entity.Report;
+import org.skhuconnect.report.entity.ReportActionType;
+import org.skhuconnect.report.entity.ReportStatus;
+import org.skhuconnect.report.entity.ReportTargetType;
 import org.skhuconnect.user.entity.User;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
@@ -17,9 +22,9 @@ import static org.skhuconnect.notification.entity.NotificationType.*;
 public class NotificationEventService {
     private final NotificationRepository notifications;
     private final AgreementRepository agreements;
-    private final FcmPushService fcmPushService;
-    public NotificationEventService(NotificationRepository notifications, AgreementRepository agreements, FcmPushService fcmPushService) {
-        this.notifications = notifications; this.agreements = agreements; this.fcmPushService = fcmPushService;
+    private final ApplicationEventPublisher events;
+    public NotificationEventService(NotificationRepository notifications, AgreementRepository agreements, ApplicationEventPublisher events) {
+        this.notifications = notifications; this.agreements = agreements; this.events = events;
     }
 
     public void onAgreementAdded(Petition petition, int previousCount) {
@@ -65,6 +70,21 @@ public class NotificationEventService {
                 "petition:comment:" + comment.getPetition().getId() + ":" + comment.getId() + ":" + receiver.getId());
     }
 
+    public void onReportProcessed(Report report) {
+        User reporter = report.getReporter();
+        Petition petition = report.getPetition();
+        Comment comment = report.getComment();
+        NotificationType reporterType = report.getStatus() == ReportStatus.DISMISSED ? REPORT_DISMISSED : REPORT_ACTION_TAKEN;
+        createOnce(reporter, reporterType, petition, comment,
+                "report:" + report.getId() + ":reporter:" + reporter.getId());
+        if (report.getStatus() == ReportStatus.ACTION_TAKEN) {
+            User target = report.getTargetType() == ReportTargetType.PETITION ? petition.getWriter() : comment.getWriter();
+            NotificationType targetType = report.getActionType() == ReportActionType.HIDE ? CONTENT_HIDDEN : ACCOUNT_LOGIN_BANNED;
+            createOnce(target, targetType, petition, comment,
+                    "report:" + report.getId() + ":target:" + target.getId());
+        }
+    }
+
     public void onReplyCreated(Comment reply) {
         if (!reply.isReply()) return;
         User receiver = reply.getParentComment().getWriter();
@@ -86,19 +106,23 @@ public class NotificationEventService {
     }
 
     private void createNoticeOnce(User receiver, String title, String body, String eventKey) {
-        if (!receiver.isNotificationEnabled() || notifications.existsByEventKey(eventKey)) return;
+        if (!receiver.isNotificationEnabled()
+                || !receiver.allows(NOTICE.point())
+                || notifications.existsByEventKey(eventKey)) return;
         try {
             Notification notification = notifications.saveAndFlush(Notification.createNotice(receiver, title, body, eventKey));
-            try { fcmPushService.send(notification); } catch (RuntimeException ignored) { }
+            events.publishEvent(FcmPushService.PushMessage.from(notification));
         } catch (DataIntegrityViolationException ignored) { }
     }
 
     private void createOnce(User receiver, NotificationType type, Petition petition,
                             Comment comment, String eventKey) {
-        if (!receiver.isNotificationEnabled() || notifications.existsByEventKey(eventKey)) return;
+        if (!receiver.isNotificationEnabled()
+                || !receiver.allows(type.point())
+                || notifications.existsByEventKey(eventKey)) return;
         try {
             Notification notification = notifications.saveAndFlush(Notification.create(receiver, type, petition, comment, eventKey));
-            try { fcmPushService.send(notification); } catch (RuntimeException ignored) { }
+            events.publishEvent(FcmPushService.PushMessage.from(notification));
         } catch (DataIntegrityViolationException ignored) {
             // Unique event_key is the final guard for concurrent duplicate events.
         }

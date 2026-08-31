@@ -1,6 +1,8 @@
 package org.skhuconnect.notification.repository;
 
 import org.junit.jupiter.api.Test;
+import org.skhuconnect.admin.entity.Admin;
+import org.skhuconnect.admin.repository.AdminRepository;
 import org.skhuconnect.department.entity.Department;
 import org.skhuconnect.department.repository.DepartmentRepository;
 import org.skhuconnect.notification.entity.*;
@@ -29,6 +31,48 @@ class NotificationRepositoryIntegrationTest {
     @Autowired DepartmentRepository departments;
     @Autowired UserRepository users;
     @Autowired PetitionRepository petitions;
+    @Autowired AdminRepository admins;
+
+    @Test void hiddenPetitionDropsItsNotificationsButKeepsNoticeOnes() {
+        String u=UUID.randomUUID().toString().replace("-","");
+        Department department=departments.saveAndFlush(Department.create("H"+u.substring(0,12),"hidden-"+u.substring(0,12)));
+        User user=users.saveAndFlush(User.create(u+"@office.skhu.ac.kr","h"+u.substring(0,12),"encoded",department));
+        Admin admin=admins.saveAndFlush(Admin.create("a"+u.substring(0,12),"encoded"));
+        Petition petition=petitions.saveAndFlush(Petition.create(user, PetitionCategory.FACILITY,
+                "hidden test","content",10, LocalDateTime.now()));
+        notifications.saveAndFlush(Notification.create(user,NotificationType.PETITION_UNDER_REVIEW,
+                petition,null,"hidden:"+u));
+        notifications.saveAndFlush(Notification.createNotice(user,"공지","본문","notice:"+u));
+
+        assertThat(notifications.findVisibleByReceiverId(user.getId(),PageRequest.of(0,20))).hasSize(2);
+        assertThat(notifications.countUnreadVisibleByReceiverId(user.getId())).isEqualTo(2);
+
+        petition.hide("운영 정책 위반",admin,LocalDateTime.now());
+        petitions.saveAndFlush(petition);
+
+        assertThat(notifications.findVisibleByReceiverId(user.getId(),PageRequest.of(0,20))).hasSize(1);
+        assertThat(notifications.countUnreadVisibleByReceiverId(user.getId())).isEqualTo(1);
+    }
+
+    @Test void contentHiddenNotificationSurvivesItsOwnPetitionBeingHidden() {
+        // CONTENT_HIDDEN 의 존재 목적 자체가 "네 글이 숨겨졌다"를 알리는 것이다 - 위 테스트의
+        // "숨겨진 청원의 알림은 목록에서 빠진다" 규칙에 이 타입까지 걸리면 알림이 생기자마자
+        // 곧바로 안 보이게 된다(2026-08-30 실제로 이렇게 새고 있었다).
+        String u=UUID.randomUUID().toString().replace("-","");
+        Department department=departments.saveAndFlush(Department.create("C"+u.substring(0,12),"chidden-"+u.substring(0,12)));
+        User writer=users.saveAndFlush(User.create(u+"@office.skhu.ac.kr","c"+u.substring(0,12),"encoded",department));
+        Admin admin=admins.saveAndFlush(Admin.create("ca"+u.substring(0,12),"encoded"));
+        Petition petition=petitions.saveAndFlush(Petition.create(writer, PetitionCategory.FACILITY,
+                "content hidden test","content",10, LocalDateTime.now()));
+        petition.hide("신고 조치",admin,LocalDateTime.now());
+        petitions.saveAndFlush(petition);
+
+        notifications.saveAndFlush(Notification.create(writer,NotificationType.CONTENT_HIDDEN,
+                petition,null,"content-hidden:"+u));
+
+        assertThat(notifications.findVisibleByReceiverId(writer.getId(),PageRequest.of(0,20))).hasSize(1);
+        assertThat(notifications.countUnreadVisibleByReceiverId(writer.getId())).isEqualTo(1);
+    }
 
     @Test void savesListsCountsAndRejectsDuplicateEventKey() {
         String u=UUID.randomUUID().toString().replace("-","");
@@ -39,8 +83,8 @@ class NotificationRepositoryIntegrationTest {
         notifications.saveAndFlush(Notification.create(user,NotificationType.PETITION_UNDER_REVIEW,
                 petition,null,"event:"+u));
 
-        assertThat(notifications.countByReceiverIdAndReadFalse(user.getId())).isEqualTo(1);
-        assertThat(notifications.findByReceiverId(user.getId(),PageRequest.of(0,20))).hasSize(1);
+        assertThat(notifications.countUnreadVisibleByReceiverId(user.getId())).isEqualTo(1);
+        assertThat(notifications.findVisibleByReceiverId(user.getId(),PageRequest.of(0,20))).hasSize(1);
         assertThatThrownBy(()->notifications.saveAndFlush(Notification.create(user,
                 NotificationType.PETITION_UNDER_REVIEW,petition,null,"event:"+u)))
                 .isInstanceOf(DataIntegrityViolationException.class);

@@ -79,6 +79,9 @@ class EmailVerificationServiceTest {
         assertThatThrownBy(() -> service.sendCode(
                 "new@office.skhu.ac.kr", EmailVerificationPurpose.PASSWORD_RESET))
                 .isInstanceOf(EmailVerificationException.class);
+        assertThatThrownBy(() -> service.sendCode(
+                "new@office.skhu.ac.kr", EmailVerificationPurpose.LOGIN_ID_FIND))
+                .isInstanceOf(EmailVerificationException.class);
     }
 
     @Test
@@ -91,6 +94,21 @@ class EmailVerificationServiceTest {
 
         service.sendCode("student@office.skhu.ac.kr",
                 EmailVerificationPurpose.PASSWORD_RESET);
+
+        verify(emailSender).sendVerificationCode(
+                "student@office.skhu.ac.kr", "123456");
+    }
+
+    @Test
+    void sendsLoginIdFindCodeOnlyForRegisteredEmail() {
+        when(userRepository.existsByEmail("student@office.skhu.ac.kr")).thenReturn(true);
+        when(repository.findByEmailAndPurpose(
+                "student@office.skhu.ac.kr", EmailVerificationPurpose.LOGIN_ID_FIND))
+                .thenReturn(Optional.empty());
+        when(codeGenerator.generate()).thenReturn("123456");
+
+        service.sendCode("student@office.skhu.ac.kr",
+                EmailVerificationPurpose.LOGIN_ID_FIND);
 
         verify(emailSender).sendVerificationCode(
                 "student@office.skhu.ac.kr", "123456");
@@ -193,10 +211,56 @@ class EmailVerificationServiceTest {
                 .isInstanceOf(EmailVerificationException.class);
     }
 
+    @Test
+    void loginIdFindTokenRejectsOtherPurposeExpiryAndReuse() {
+        EmailVerification otherPurpose = verification(
+                "123456", NOW, EmailVerificationPurpose.PASSWORD_RESET);
+        otherPurpose.verify(hasher.hashToken("other-token"), NOW, NOW.plusMinutes(30));
+        when(repository.findByTokenHash(hasher.hashToken("other-token")))
+                .thenReturn(Optional.of(otherPurpose));
+        assertThatThrownBy(() -> service.consumeToken(
+                "other-token", EmailVerificationPurpose.LOGIN_ID_FIND))
+                .isInstanceOf(EmailVerificationException.class)
+                .extracting("reason")
+                .isEqualTo(EmailVerificationException.Reason.PURPOSE_MISMATCH);
+
+        EmailVerification expired = verification(
+                "123456", NOW, EmailVerificationPurpose.LOGIN_ID_FIND);
+        expired.verify(hasher.hashToken("expired-token"),
+                NOW.minusMinutes(31), NOW.minusMinutes(1));
+        when(repository.findByTokenHash(hasher.hashToken("expired-token")))
+                .thenReturn(Optional.of(expired));
+        assertThatThrownBy(() -> service.consumeToken(
+                "expired-token", EmailVerificationPurpose.LOGIN_ID_FIND))
+                .isInstanceOf(EmailVerificationException.class)
+                .extracting("reason")
+                .isEqualTo(EmailVerificationException.Reason.TOKEN_EXPIRED);
+
+        EmailVerification reusable = verification(
+                "123456", NOW, EmailVerificationPurpose.LOGIN_ID_FIND);
+        reusable.verify(hasher.hashToken("one-time-token"), NOW, NOW.plusMinutes(30));
+        when(repository.findByTokenHash(hasher.hashToken("one-time-token")))
+                .thenReturn(Optional.of(reusable));
+        service.consumeToken("one-time-token", EmailVerificationPurpose.LOGIN_ID_FIND);
+        assertThatThrownBy(() -> service.consumeToken(
+                "one-time-token", EmailVerificationPurpose.LOGIN_ID_FIND))
+                .isInstanceOf(EmailVerificationException.class)
+                .extracting("reason")
+                .isEqualTo(EmailVerificationException.Reason.TOKEN_USED);
+    }
+
     private EmailVerification verification(String code, LocalDateTime sentAt) {
+        return verification(code, sentAt, EmailVerificationPurpose.SIGN_UP);
+    }
+
+    private EmailVerification verification(
+            String code,
+            LocalDateTime sentAt,
+            EmailVerificationPurpose purpose
+    ) {
         String salt = "salt";
         return EmailVerification.create(
-                "student@office.skhu.ac.kr", EmailVerificationPurpose.SIGN_UP,
+                "student@office.skhu.ac.kr", purpose,
                 hasher.hashCode(salt, code), salt, sentAt.plusMinutes(5), sentAt);
     }
 }
