@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
@@ -23,6 +24,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByIdAndDeletedFalse(Long id);
 
     boolean existsByIdAndDeletedFalseAndLoginBannedFalse(Long id);
+
+    List<User> findByDeletedFalse();
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select u from User u where u.loginId = :loginId")

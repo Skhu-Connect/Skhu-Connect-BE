@@ -49,6 +49,9 @@ OfficialAnswer
 NotificationLog
 ThresholdSetting
 UserBlock
+Report
+Notice
+NoticeDismissal
 ```
 
 다음 항목은 후속 설계이며 현재 코드에 Entity가 없다.
@@ -56,8 +59,6 @@ UserBlock
 ```text
 OfficialAnswerHistory
 ThresholdSettingHistory
-Report
-Notice
 ```
 
 따라서 OfficialAnswerHistory와 ThresholdSettingHistory는 현재 DB 스키마가 아니라 후속 구현 범위다.
@@ -79,12 +80,14 @@ User 1 ─── N Notification
 User 1 ─── 0..1 RefreshToken
 User 1 ─── N UserBlock (blocker)
 User 1 ─── N UserBlock (blockedUser)
+User 1 ─── N NoticeDismissal
 
 Admin 1 ─── N OfficialAnswer
 Admin 1 ─── N NotificationLog
 Admin 1 ─── N Petition Visibility Action
 Admin 1 ─── N Comment Visibility Action
 Admin 1 ─── N ThresholdSetting Update
+Admin 1 ─── N Notice
 
 Petition 1 ─── N Agreement
 Petition 1 ─── N Bookmark
@@ -96,6 +99,8 @@ Petition 1 ─── N Notification
 PetitionAnonymousNumber 1 ─── N Comment
 
 Comment 1 ─── N CommentLike
+
+Notice 1 ─── N NoticeDismissal
 ```
 
 `Petition Visibility Action`과 `Comment Visibility Action`은 별도 Entity가 아니다.
@@ -1155,6 +1160,14 @@ INDEX ix_notification_logs_type_created_at (type, created_at)
 INDEX ix_notification_logs_created_at (created_at)
 ```
 
+## NoticeDismissal
+
+```text
+UNIQUE INDEX ux_notice_dismissals_user_notice (user_id, notice_id)
+INDEX ix_notice_dismissals_user_created (user_id, created_at)
+INDEX ix_notice_dismissals_notice_id (notice_id)
+```
+
 전체 인덱스는 실제 조회 쿼리와 실행 계획을 확인한 후 조정할 수 있다.
 
 --- 
@@ -1344,6 +1357,8 @@ ACTION_TAKEN 처리 시 관리자가 조치 종류(`action_type` 컬럼, `VARCHA
 ## Notice
 
 공지 상태는 DRAFT, PUBLISHED, HIDDEN을 사용한다. 최초 PUBLISHED 전환에서만 기존 사용자 Notification/FCM으로 전체 알림을 발송하고, 수정·숨김·재공개에서는 재발송하지 않는다. 공개 공지만 사용자에게 노출하며 물리 삭제하지 않는다.
+
+사용자는 공지를 삭제할 수 없고 메인 배너에서 개별 공지만 닫을 수 있다. 닫기 기록은 `notice_dismissals`에 `(user_id, notice_id)` UNIQUE로 저장하며 공지 원본과 다른 사용자에게 영향이 없다.
 
 대시보드는 별도 Entity 없이 현재 누적 기준의 사용자 수, 청원 상태별 수, 동의 수, 댓글 수, 미처리 신고 수를 집계한다. 기간별·추가 통계는 후속 범위다.
 

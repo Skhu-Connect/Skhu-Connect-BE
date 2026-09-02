@@ -281,6 +281,7 @@ class AccessTokenAuthenticationFilterTest {
         for (String path : List.of(
                 "/connect/users/me/department",
                 "/connect/users/me/notification-settings",
+                "/connect/users/me/notices/10/dismiss",
                 "/connect/users/me/login-id",
                 "/connect/users/me/password")) {
             MockHttpServletRequest request = new MockHttpServletRequest("PATCH", path);

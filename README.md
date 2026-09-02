@@ -63,6 +63,7 @@ FIREBASE_SERVICE_ACCOUNT_JSON (미설정 시 FCM 푸시 발송만 비활성화)
 | 북마크 등록·취소·내 목록 | `/connect/petitions/{petitionId}/bookmarks`, `/connect/petitions/bookmarks` | 필요 | 200, 201, 204 |
 | 댓글·대댓글·공감 | `/connect/petitions/{petitionId}/comments/**` | 목록만 공개 | 200, 201, 204 |
 | 알림 목록·미읽음·읽음 처리 | `/connect/notifications/**` | 필요 | 200, 204 |
+| 공지사항 조회·배너 닫기 | `/connect/notices`, `/connect/users/me/notices/**` | 전체 목록 공개, 닫기 필요 | 200, 204 |
 | 내 정보·활동 내역·알림 설정 | `/connect/users/me/**` | 필요 | 200 |
 | 내 아이디·비밀번호 변경 | `PATCH /connect/users/me/login-id`, `/password` | 필요 | 200, 204 |
 | 사용자 영구 차단 | `POST /connect/users/me/blocks` | 필요 | 201 |
@@ -99,6 +100,7 @@ org.skhuconnect
 - 북마크 등록·취소·내 목록
 - 댓글·대댓글·공감, 청원별 영구 익명 번호
 - 알림 생성·목록·미읽음 개수·개별/전체 읽음 처리·종류별 수신 설정
+- 공지사항 공개 목록, 사용자별 메인 배너 닫기
 - 로그인 사용자의 정보, 작성 청원·동의 청원·북마크 청원·작성 댓글·알림 조회
 - 관리자 전용 인증, 임계치 조회·수정, 청원·댓글 숨김·복구, 공식 답변 등록·수정·조회, 운영 로그 조회
 - 사용자 청원 상세의 공식 답변 조회
