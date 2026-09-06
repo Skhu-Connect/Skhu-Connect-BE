@@ -1,0 +1,202 @@
+name: Deploy Backend
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: skhu-connect-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and deploy to SSH server
+    runs-on: ubuntu-latest
+
+    env:
+      REMOTE_DIR: /home/i1000u/skhu-connect
+      SERVICE_NAME: skhu-connect
+      HEALTH_URL: https://i1000u.hueeng.com/actuator/health
+      DEPLOY_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Build bootJar
+        run: |
+          chmod +x ./gradlew
+          ./gradlew bootJar -x test
+
+      - name: Locate executable bootJar
+        id: jar
+        shell: bash
+        run: |
+          mapfile -t jars < <(find build/libs -maxdepth 1 -type f -name '*.jar' ! -name '*plain.jar' | sort)
+          if [ "${#jars[@]}" -ne 1 ]; then
+            echo "Expected exactly one executable jar, found ${#jars[@]}." >&2
+            printf '%s\n' "${jars[@]}" >&2
+            exit 1
+          fi
+          echo "path=${jars[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: Configure SSH
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy_key
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Upload new jar
+        shell: bash
+        run: |
+          scp \
+            -i ~/.ssh/deploy_key \
+            -P "${{ secrets.SSH_PORT }}" \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile=~/.ssh/known_hosts \
+            "${{ steps.jar.outputs.path }}" \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${REMOTE_DIR}/app.jar.new"
+
+      - name: Activate new jar
+        id: activate
+        shell: bash
+        continue-on-error: true
+        run: |
+          set +e
+          output="$(ssh \
+            -i ~/.ssh/deploy_key \
+            -p "${{ secrets.SSH_PORT }}" \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile=~/.ssh/known_hosts \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "REMOTE_DIR='${REMOTE_DIR}' SERVICE_NAME='${SERVICE_NAME}' DEPLOY_ID='${DEPLOY_ID}' bash -s" <<'EOF'
+          set -euo pipefail
+
+          cd "$REMOTE_DIR"
+          test -f app.jar
+          test -f app.jar.new
+
+          mkdir -p backups
+          cp -p app.jar "backups/app.jar.${DEPLOY_ID}.bak"
+          mv -f app.jar.new app.jar
+          echo "APP_JAR_SWAPPED=true"
+
+          sudo -n systemctl restart "$SERVICE_NAME"
+          EOF
+          )"
+          status=$?
+          set -e
+
+          printf '%s\n' "$output"
+          if printf '%s\n' "$output" | grep -qx 'APP_JAR_SWAPPED=true'; then
+            echo "swapped=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "swapped=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          exit "$status"
+
+      - name: Verify health
+        id: health
+        if: steps.activate.outcome == 'success'
+        shell: bash
+        continue-on-error: true
+        run: |
+          for attempt in {1..12}; do
+            body="$(curl -fsS --max-time 5 "$HEALTH_URL" || true)"
+            if printf '%s' "$body" | grep -q '"status"[[:space:]]*:[[:space:]]*"UP"'; then
+              echo "Health check passed on attempt ${attempt}."
+              exit 0
+            fi
+            echo "Health check attempt ${attempt}/12 failed; retrying..."
+            sleep 5
+          done
+
+          echo "Health check failed after 12 attempts." >&2
+          exit 1
+
+      - name: Roll back failed deploy
+        if: ${{ always() && ((steps.activate.outcome == 'failure' && steps.activate.outputs.swapped == 'true') || steps.health.outcome == 'failure') }}
+        shell: bash
+        run: |
+          ssh \
+            -i ~/.ssh/deploy_key \
+            -p "${{ secrets.SSH_PORT }}" \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile=~/.ssh/known_hosts \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "REMOTE_DIR='${REMOTE_DIR}' SERVICE_NAME='${SERVICE_NAME}' DEPLOY_ID='${DEPLOY_ID}' bash -s" <<'EOF'
+          set -euo pipefail
+
+          cd "$REMOTE_DIR"
+          test -f "backups/app.jar.${DEPLOY_ID}.bak"
+
+          cp -p "backups/app.jar.${DEPLOY_ID}.bak" app.jar
+          rm -f app.jar.new
+
+          sudo -n systemctl restart "$SERVICE_NAME"
+          EOF
+
+      - name: Verify rollback health
+        if: ${{ always() && ((steps.activate.outcome == 'failure' && steps.activate.outputs.swapped == 'true') || steps.health.outcome == 'failure') }}
+        shell: bash
+        run: |
+          for attempt in {1..12}; do
+            body="$(curl -fsS --max-time 5 "$HEALTH_URL" || true)"
+            if printf '%s' "$body" | grep -q '"status"[[:space:]]*:[[:space:]]*"UP"'; then
+              echo "Rollback health check passed on attempt ${attempt}."
+              exit 0
+            fi
+            echo "Rollback health check attempt ${attempt}/12 failed; retrying..."
+            sleep 5
+          done
+
+          echo "Rollback health check failed after 12 attempts." >&2
+          exit 1
+
+      - name: Mark deploy as failed after rollback
+        if: ${{ always() && (steps.activate.outcome == 'failure' || steps.health.outcome == 'failure') }}
+        shell: bash
+        run: |
+          echo "Deployment failed; rollback path has completed or was attempted." >&2
+          exit 1
+
+      - name: Prune old backups
+        if: steps.activate.outcome == 'success' && steps.health.outcome == 'success'
+        shell: bash
+        run: |
+          ssh \
+            -i ~/.ssh/deploy_key \
+            -p "${{ secrets.SSH_PORT }}" \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile=~/.ssh/known_hosts \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "REMOTE_DIR='${REMOTE_DIR}' bash -s" <<'EOF'
+          set -euo pipefail
+
+          cd "$REMOTE_DIR"
+          mkdir -p backups
+          find backups -maxdepth 1 -type f -name 'app.jar.*.bak' -printf '%T@ %p\n' \
+            | sort -rn \
+            | awk 'NR > 5 {print $2}' \
+            | xargs -r rm -f --
+          EOF
