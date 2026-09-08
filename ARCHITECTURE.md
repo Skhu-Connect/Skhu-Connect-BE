@@ -1,7 +1,7 @@
 # SKHU Connect Architecture
 
-> Last Updated: 2026-08-27
-> 기준: `fix/#57` 브랜치의 알림 종류별 설정 API 구현
+> Last Updated: 2026-09-08
+> 기준: `main`/`dev` 문서 정리와 SSH 서버 배포 전환
 
 ## 1. 서비스와 현재 상태
 
@@ -25,7 +25,7 @@ SKHU Connect는 성공회대학교 학생 청원 플랫폼이다. 학생은 학�
 - 청원 10분 작성 쿨다운과 기존 공개 API 기반 청원 공유
 - 관리자 인증, 임계치 관리, 콘텐츠 숨김·복구, 공식 답변 등록·수정·조회, 운영 로그와 대시보드
 - 공식 답변 등록 시 `PETITION_ANSWERED` 사용자 알림 연결
-- Railway의 `main` 브랜치 자동 배포
+- GitHub Actions의 `main` 브랜치 SSH 서버 자동 배포
 
 ### 미구현·후속 범위
 
