@@ -88,34 +88,19 @@ org.skhuconnect
 └─ global            공통 설정·보안·예외·JPA 기반
 ```
 
-## 현재 구현 범위(dev 기준)
+## 현재 구현 범위
 
-- 학교 이메일 인증, 회원가입, BCrypt 비밀번호 저장
-- JWT Access Token, Refresh Token 회전·재발급·로그아웃
-- 이메일 인증 또는 현재 비밀번호를 이용한 아이디 찾기
-- 비밀번호 재설정
-- 로그인 상태의 아이디·비밀번호 변경
-- 청원 CRUD·검색·상세·논리 삭제 및 OPEN/EXPIRED 유효 상태 계산
-- 동의·취소, 중복 방지, 임계치 달성 시 `UNDER_REVIEW` 전환
-- 북마크 등록·취소·내 목록
-- 댓글·대댓글·공감, 청원별 영구 익명 번호
-- 알림 생성·목록·미읽음 개수·개별/전체 읽음 처리·종류별 수신 설정
-- 공지사항 공개 목록, 사용자별 메인 배너 닫기
-- 로그인 사용자의 정보, 작성 청원·동의 청원·북마크 청원·작성 댓글·알림 조회
-- 관리자 전용 인증, 임계치 조회·수정, 청원·댓글 숨김·복구, 공식 답변 등록·수정·조회, 운영 로그 조회
-- 사용자 청원 상세의 공식 답변 조회
-- Controller/MVC, Service, Entity, Repository/JPA, 인증, 동시성 및 트랜잭션 테스트
-
-사용자 활동 조회는 JWT의 `userId`만 사용한다. 활동 목록에서는 hidden/deleted 청원과 삭제 댓글을 제외하며, 숨김 댓글은 기존 댓글 노출 정책을 재사용한다. 사용자 정보 응답은 이메일, 로그인 ID, 학과 코드·이름, 전체 및 종류별 알림 수신 여부를 반환하며 DB PK와 비밀번호는 반환하지 않는다. 종류별 설정은 `PATCH /connect/users/me/notification-settings`로 부분 갱신한다.
+- 인증: 학교 이메일 인증, 회원가입, 로그인, JWT/Refresh Token, 아이디 찾기, 비밀번호 재설정·변경, 회원 탈퇴와 30일 재가입 제한
+- 청원: CRUD, 검색·상세, 동의, 북마크, 댓글·대댓글·공감, 청원별 익명 번호, 10분 작성 쿨다운, 공유 공개 조회
+- 알림·공지: 사용자 알림, 종류별 수신 설정, FCM 푸시 연동, 공지사항과 사용자별 배너 닫기
+- 사용자: 내 정보와 작성·동의·북마크·댓글·알림 활동 조회, 사용자 영구 차단
+- 관리자: 관리자 인증, 임계치 관리, 콘텐츠 숨김·복구, 공식 답변, 신고 처리, 운영 로그와 대시보드
+- 테스트: Controller/MVC, Service, Entity, Repository/JPA, 인증, 동시성 및 트랜잭션 테스트
 
 ## 테스트 현황
 
-- 단위 테스트: Entity 불변식, Service 정책, DTO 변환, 토큰·메일 지원 로직
-- MVC 테스트: Request Validation, 응답 본문과 400/403/404/409 예외 매핑, Swagger 메타데이터
-- JPA 테스트: Entity 매핑, UNIQUE 제약, hidden/deleted 필터, 페이지 안정 정렬
-- 통합 테스트: 회원가입·로그인/토큰 회전·비밀번호 재설정 트랜잭션, 동의·북마크·댓글 동시성
-- 인증 테스트: 공개/보호 경로, JWT 누락·위조·만료·role·subject 검증
-- 알림·사용자 활동 테스트: 이벤트 중복·수신 설정, 읽음 처리, JWT 사용자 범위와 활동 조회 정책
+- 단위·MVC·JPA·통합 테스트로 주요 도메인 정책, 인증, 예외 매핑, UNIQUE 제약, 동시성, 알림·사용자 활동 범위를 검증한다.
+- 최종 변경 검증은 `.\gradlew.bat clean test`, `.\gradlew.bat clean build`, `git diff --check`를 기준으로 한다.
 
 ## 미구현·후속 범위
 
@@ -123,7 +108,16 @@ org.skhuconnect
 
 ## 배포
 
-- Railway가 `main` 브랜치 푸시를 감지해 자동 배포한다.
+- `main` 브랜치 푸시 시 GitHub Actions가 지인 서버에 SSH로 자동 배포한다.
+- 워크플로우: `.github/workflows/deploy.yml`
+- 서버: `i1000u@i1000u-ssh.hueeng.com:22022`
+- 작업 디렉터리: `/home/i1000u/skhu-connect`
+- 서비스명: `skhu-connect`
+- Health check: `https://i1000u.hueeng.com/actuator/health`
+
+```bash
+ssh -p 22022 -i "/c/Users/grand/Desktop/대학 파일/성공잇다/i1000u_ssh.key" i1000u@i1000u-ssh.hueeng.com
+```
 
 ## 문서
 
