@@ -1,6 +1,6 @@
 # SKHU Connect ERD
 
-> Last Updated: 2026-08-27
+> Last Updated: 2026-09-21
 >
 > 본 문서는 SKHU Connect 백엔드의 MVP 데이터베이스 설계 기준이다.
 > Entity 구현과 데이터베이스 변경은 `ARCHITECTURE.md`, API 명세서, 본 문서를 기준으로 진행한다.
@@ -52,6 +52,8 @@ UserBlock
 Report
 Notice
 NoticeDismissal
+PetitionEmbedding
+PetitionSimilaritySearchLog
 ```
 
 다음 항목은 후속 설계이며 현재 코드에 Entity가 없다.
@@ -81,6 +83,7 @@ User 1 ─── 0..1 RefreshToken
 User 1 ─── N UserBlock (blocker)
 User 1 ─── N UserBlock (blockedUser)
 User 1 ─── N NoticeDismissal
+User 1 ─── N PetitionSimilaritySearchLog
 
 Admin 1 ─── N OfficialAnswer
 Admin 1 ─── N NotificationLog
@@ -95,6 +98,7 @@ Petition 1 ─── N Comment
 Petition 1 ─── N PetitionAnonymousNumber
 Petition 1 ─── 0..1 OfficialAnswer
 Petition 1 ─── N Notification
+Petition 1 ─── 0..1 PetitionEmbedding
 
 PetitionAnonymousNumber 1 ─── N Comment
 
@@ -493,6 +497,84 @@ UNDER_REVIEW
 - 만료 청원은 읽기 전용으로 보관한다.
 - 만료 청원에는 동의, 동의 취소, 댓글 작성을 허용하지 않는다.
 - 특정 학부를 대상으로 하는 별도 컬럼은 MVP에서 사용하지 않는다.
+
+---
+
+# 9.1 PetitionEmbedding
+
+AI 유사 청원 검색에 사용할 청원별 임베딩을 저장한다.
+
+## 테이블명
+
+```text
+petition_embeddings
+```
+
+## 컬럼
+
+| 컬럼 | 타입 | Null | 제약조건 | 설명 |
+|---|---|---:|---|---|
+| `id` | `BIGINT` | 불가 | PK, AUTO_INCREMENT | 임베딩 식별자 |
+| `petition_id` | `BIGINT` | 불가 | FK, UNIQUE | 대상 청원 |
+| `model_name` | `VARCHAR(100)` | 불가 |  | 임베딩 모델 이름 |
+| `dimensions` | `INT` | 불가 |  | 임베딩 차원 |
+| `content_hash` | `VARCHAR(64)` | 불가 |  | 제목+본문 해시 |
+| `embedding` | `BLOB` | 불가 |  | float 배열을 byte 배열로 인코딩한 벡터 |
+| `status` | `VARCHAR(20)` | 불가 |  | READY, FAILED, STALE |
+| `last_error` | `VARCHAR(500)` | 가능 |  | 마지막 실패 사유 |
+| `embedded_at` | `DATETIME(6)` | 가능 |  | 마지막 처리 시각 |
+| `created_at` | `DATETIME(6)` | 불가 |  | 생성 시각 |
+| `updated_at` | `DATETIME(6)` | 불가 |  | 수정 시각 |
+
+## 제약조건
+
+```text
+UNIQUE(petition_id)
+FOREIGN KEY(petition_id) REFERENCES petitions(id)
+```
+
+## 비즈니스 규칙
+
+- 현재 기본 모델은 `text-embedding-3-small`, 256차원이다. 256차원 벡터는 float 4바이트 기준 1024바이트로 저장된다.
+- 추천 대상은 `READY`이면서 현재 모델명, 차원, 제목+본문 해시가 일치하는 행만 사용한다.
+- 생성 실패 행은 `FAILED`로 저장하고 추천 대상에서 제외한다.
+
+---
+
+# 9.2 PetitionSimilaritySearchLog
+
+사용자별 AI 유사 청원 검색 횟수 제한과 동일 입력 캐시 재사용을 위해 검색 로그를 저장한다.
+
+## 테이블명
+
+```text
+petition_similarity_search_logs
+```
+
+## 컬럼
+
+| 컬럼 | 타입 | Null | 제약조건 | 설명 |
+|---|---|---:|---|---|
+| `id` | `BIGINT` | 불가 | PK, AUTO_INCREMENT | 검색 로그 식별자 |
+| `user_id` | `BIGINT` | 불가 | FK | 검색 사용자 |
+| `query_hash` | `VARCHAR(64)` | 불가 |  | 검색 제목+본문 해시 |
+| `model_name` | `VARCHAR(100)` | 불가 |  | 임베딩 모델 이름 |
+| `dimensions` | `INT` | 불가 |  | 임베딩 차원 |
+| `query_embedding` | `BLOB` | 불가 |  | 검색어 임베딩 벡터 |
+| `counted` | `BOOLEAN` | 불가 |  | 사용량 차감 여부 |
+| `created_at` | `DATETIME(6)` | 불가 |  | 생성 시각 |
+| `updated_at` | `DATETIME(6)` | 불가 |  | 수정 시각 |
+
+## 제약조건
+
+```text
+FOREIGN KEY(user_id) REFERENCES users(id)
+```
+
+## 비즈니스 규칙
+
+- 최근 10분 안의 같은 사용자, 같은 입력 해시, 같은 모델명과 차원 로그가 있으면 캐시로 사용한다.
+- 성공한 신규 검색만 `counted=true`로 저장한다. AI 장애는 로그를 저장하지 않는다.
 
 ---
 
@@ -1092,6 +1174,21 @@ INDEX ix_petitions_category_created_at (category, created_at)
 INDEX ix_petitions_hidden_deleted (hidden, deleted)
 INDEX ix_petitions_writer_id_created_at (writer_id, created_at)
 INDEX ix_petitions_status_agreement_deadline (status, agreement_deadline)
+```
+
+## PetitionEmbedding
+
+```text
+UNIQUE INDEX ux_petition_embeddings_petition_id (petition_id)
+INDEX ix_petition_embeddings_status_model (status, model_name, dimensions)
+INDEX ix_petition_embeddings_content_hash (content_hash)
+```
+
+## PetitionSimilaritySearchLog
+
+```text
+INDEX ix_similarity_logs_user_created (user_id, created_at)
+INDEX ix_similarity_logs_user_query (user_id, query_hash, model_name, dimensions, created_at)
 ```
 
 ## Agreement
