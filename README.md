@@ -30,6 +30,7 @@ JWT_SECRET
 JWT_COOKIE_SECURE (기본 false)
 PORT (기본 8080)
 FIREBASE_SERVICE_ACCOUNT_JSON (미설정 시 FCM 푸시 발송만 비활성화)
+OPENAI_API_KEY (미설정 시 AI 유사 청원 검색과 임베딩 백필 사용 불가)
 ```
 
 `JWT_SECRET`은 Base64로 인코딩된 256-bit 이상의 HS256 키여야 합니다. 비밀값은 저장소에 기록하지 않습니다.
@@ -59,6 +60,7 @@ FIREBASE_SERVICE_ACCOUNT_JSON (미설정 시 FCM 푸시 발송만 비활성화)
 | 비밀번호 재설정 | `POST /connect/auth/password/reset` | 인증 토큰 | 204 |
 | 학과 목록 | `GET /connect/departments` | 불필요 | 200 |
 | 청원 등록·목록·상세·수정·삭제 | `/connect/petitions` | 목록·상세만 공개 | 200, 201, 204 |
+| AI 유사 청원 검색·사용량 | `/connect/petitions/similar`, `/connect/petitions/similar/usage` | 필요 | 200 |
 | 동의 등록·취소 | `/connect/petitions/{petitionId}/agreements` | 필요 | 201, 204 |
 | 북마크 등록·취소·내 목록 | `/connect/petitions/{petitionId}/bookmarks`, `/connect/petitions/bookmarks` | 필요 | 200, 201, 204 |
 | 댓글·대댓글·공감 | `/connect/petitions/{petitionId}/comments/**` | 목록만 공개 | 200, 201, 204 |
@@ -80,6 +82,7 @@ org.skhuconnect
 ├─ user              사용자 Entity와 본인 정보·활동 조회
 ├─ department        학과
 ├─ petition          청원
+│  └─ similarity     AI 유사 청원 검색과 임베딩 백필
 ├─ agreement         동의
 ├─ bookmark          북마크
 ├─ comment           댓글·대댓글·공감·익명 번호
@@ -91,7 +94,7 @@ org.skhuconnect
 ## 현재 구현 범위
 
 - 인증: 학교 이메일 인증, 회원가입, 로그인, JWT/Refresh Token, 아이디 찾기, 비밀번호 재설정·변경, 회원 탈퇴와 30일 재가입 제한
-- 청원: CRUD, 검색·상세, 동의, 북마크, 댓글·대댓글·공감, 청원별 익명 번호, 10분 작성 쿨다운, 공유 공개 조회
+- 청원: CRUD, 검색·상세, AI 유사 청원 검색, 동의, 북마크, 댓글·대댓글·공감, 청원별 익명 번호, 10분 작성 쿨다운, 공유 공개 조회
 - 알림·공지: 사용자 알림, 종류별 수신 설정, FCM 푸시 연동, 공지사항과 사용자별 배너 닫기
 - 사용자: 내 정보와 작성·동의·북마크·댓글·알림 활동 조회, 사용자 영구 차단
 - 관리자: 관리자 인증, 임계치 관리, 콘텐츠 숨김·복구, 공식 답변, 신고 처리, 운영 로그와 대시보드
