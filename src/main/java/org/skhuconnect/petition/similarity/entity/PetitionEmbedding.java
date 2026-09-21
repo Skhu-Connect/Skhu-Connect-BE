@@ -50,7 +50,7 @@ public class PetitionEmbedding extends BaseEntity {
     private String contentHash;
 
     @Lob
-    @Column(name = "embedding", nullable = false)
+    @Column(name = "embedding", nullable = false, columnDefinition = "BLOB")
     private byte[] embedding;
 
     @Enumerated(EnumType.STRING)
