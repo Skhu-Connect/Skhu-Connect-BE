@@ -39,3 +39,8 @@ app:
     secret: ${JWT_SECRET}
     cookie-secure: ${JWT_COOKIE_SECURE:false}
     cookie-same-site: ${JWT_COOKIE_SAME_SITE:Lax}
+
+  openai:
+    api-key: ${OPENAI_API_KEY}
+    embedding-model: text-embedding-3-small
+    embedding-dimensions: 256
