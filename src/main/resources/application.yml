@@ -16,6 +16,19 @@ server:
   port: ${PORT:8080}
   forward-headers-strategy: framework
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      show-components: always
+  health:
+    diskspace:
+      threshold: 5GB
+
 app:
   fcm:
     service-account-json: ${FIREBASE_SERVICE_ACCOUNT_JSON:}
