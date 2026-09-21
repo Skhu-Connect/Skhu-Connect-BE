@@ -7,6 +7,7 @@ import org.skhuconnect.comment.repository.CommentRepository;
 import org.skhuconnect.comment.repository.PetitionAnonymousNumberRepository;
 import org.skhuconnect.department.entity.Department;
 import org.skhuconnect.department.repository.DepartmentRepository;
+import org.skhuconnect.notification.repository.NotificationRepository;
 import org.skhuconnect.petition.entity.Petition;
 import org.skhuconnect.petition.entity.PetitionCategory;
 import org.skhuconnect.petition.repository.PetitionRepository;
@@ -42,6 +43,7 @@ class CommentConcurrencyTest {
     @Autowired private PetitionRepository petitionRepository;
     @Autowired private UserRepository userRepository;
     @Autowired private DepartmentRepository departmentRepository;
+    @Autowired private NotificationRepository notificationRepository;
 
     @Test
     void logicalDeleteThenRewriteReusesPermanentAnonymousNumber() {
@@ -70,6 +72,7 @@ class CommentConcurrencyTest {
                     .hasValueSatisfying(mapping -> assertThat(
                             mapping.getAnonymousNumber()).isEqualTo(first.anonymousNumber()));
         } finally {
+            notificationRepository.deleteAllByCommentPetitionId(petition.getId());
             likeRepository.deleteAllByCommentPetitionId(petition.getId());
             commentRepository.deleteAllByPetitionId(petition.getId());
             mappingRepository.deleteAllByPetitionId(petition.getId());
@@ -122,6 +125,7 @@ class CommentConcurrencyTest {
                     .hasSize(5);
         } finally {
             if (petition != null) {
+                notificationRepository.deleteAllByCommentPetitionId(petition.getId());
                 likeRepository.deleteAllByCommentPetitionId(petition.getId());
                 commentRepository.deleteAllByPetitionId(petition.getId());
                 mappingRepository.deleteAllByPetitionId(petition.getId());

@@ -41,6 +41,11 @@ app:
     cookie-same-site: ${JWT_COOKIE_SAME_SITE:Lax}
 
   openai:
-    api-key: ${OPENAI_API_KEY}
+    api-key: ${OPENAI_API_KEY:}
     embedding-model: text-embedding-3-small
     embedding-dimensions: 256
+  petition:
+    similarity:
+      threshold: ${PETITION_SIMILARITY_THRESHOLD:0.75}
+      search-limit: ${PETITION_SIMILARITY_SEARCH_LIMIT:3}
+      search-window: ${PETITION_SIMILARITY_SEARCH_WINDOW:10m}
