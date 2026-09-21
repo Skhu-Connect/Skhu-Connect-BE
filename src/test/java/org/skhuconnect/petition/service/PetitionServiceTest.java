@@ -19,6 +19,7 @@ import org.skhuconnect.threshold.entity.ThresholdSetting;
 import org.skhuconnect.threshold.repository.ThresholdSettingRepository;
 import org.skhuconnect.user.entity.User;
 import org.skhuconnect.user.repository.UserRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -48,6 +49,7 @@ class PetitionServiceTest {
     private UserRepository userRepository;
     private ThresholdSettingRepository thresholdSettingRepository;
     private OfficialAnswerRepository officialAnswerRepository;
+    private ApplicationEventPublisher events;
     private Clock clock;
     private PetitionService service;
 
@@ -57,10 +59,12 @@ class PetitionServiceTest {
         userRepository = mock(UserRepository.class);
         thresholdSettingRepository = mock(ThresholdSettingRepository.class);
         officialAnswerRepository = mock(OfficialAnswerRepository.class);
+        events = mock(ApplicationEventPublisher.class);
         clock = Clock.fixed(Instant.parse("2026-08-05T03:00:00Z"),
                 ZoneId.of("Asia/Seoul"));
         service = new PetitionService(
-                petitionRepository, userRepository, thresholdSettingRepository, officialAnswerRepository, clock);
+                petitionRepository, userRepository, thresholdSettingRepository,
+                officialAnswerRepository, events, clock);
     }
 
     @Test

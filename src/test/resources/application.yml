@@ -1,0 +1,30 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:skhu-connect-test;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+
+app:
+  fcm:
+    service-account-json:
+  mail:
+    resend-api-key: re_test_key
+    from: test@example.com
+  jwt:
+    secret: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+    cookie-secure: false
+    cookie-same-site: Lax
+  openai:
+    api-key:
+    embedding-model: text-embedding-3-small
+    embedding-dimensions: 256
+  petition:
+    similarity:
+      threshold: 0.75
+      search-limit: 3
+      search-window: 10m

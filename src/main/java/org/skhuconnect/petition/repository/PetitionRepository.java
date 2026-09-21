@@ -12,6 +12,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 public interface PetitionRepository extends JpaRepository<Petition, Long>,
@@ -72,4 +73,13 @@ public interface PetitionRepository extends JpaRepository<Petition, Long>,
               and petition.hidden = false
             """)
     Optional<Petition> findVisibleByIdForUpdate(@Param("id") Long id);
+
+    @Query("""
+            select petition
+            from Petition petition
+            where petition.deleted = false
+              and petition.hidden = false
+            order by petition.id asc
+            """)
+    List<Petition> findPublicPetitionsForEmbedding(Pageable pageable);
 }

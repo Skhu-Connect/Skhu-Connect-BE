@@ -1,12 +1,16 @@
 package org.skhuconnect.petition.exception;
 
 import org.skhuconnect.petition.controller.PetitionController;
+import org.skhuconnect.petition.similarity.controller.PetitionSimilarityController;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@RestControllerAdvice(assignableTypes = PetitionController.class)
+@RestControllerAdvice(assignableTypes = {
+        PetitionController.class,
+        PetitionSimilarityController.class
+})
 public class PetitionExceptionHandler {
 
     @ExceptionHandler(PetitionException.class)

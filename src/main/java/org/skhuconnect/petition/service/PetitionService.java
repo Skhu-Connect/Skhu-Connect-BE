@@ -13,10 +13,12 @@ import org.skhuconnect.petition.exception.PetitionException;
 import org.skhuconnect.petition.exception.PetitionException.Reason;
 import org.skhuconnect.petition.repository.PetitionRepository;
 import org.skhuconnect.petition.repository.PetitionSpecification;
+import org.skhuconnect.petition.similarity.event.PetitionEmbeddingRefreshRequestedEvent;
 import org.skhuconnect.threshold.entity.ThresholdSetting;
 import org.skhuconnect.threshold.repository.ThresholdSettingRepository;
 import org.skhuconnect.user.entity.User;
 import org.skhuconnect.user.repository.UserRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -44,6 +46,7 @@ public class PetitionService {
     private final UserRepository userRepository;
     private final ThresholdSettingRepository thresholdSettingRepository;
     private final OfficialAnswerRepository officialAnswerRepository;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public PetitionService(
@@ -51,12 +54,14 @@ public class PetitionService {
             UserRepository userRepository,
             ThresholdSettingRepository thresholdSettingRepository,
             OfficialAnswerRepository officialAnswerRepository,
+            ApplicationEventPublisher events,
             Clock clock
     ) {
         this.petitionRepository = petitionRepository;
         this.userRepository = userRepository;
         this.thresholdSettingRepository = thresholdSettingRepository;
         this.officialAnswerRepository = officialAnswerRepository;
+        this.events = events;
         this.clock = clock;
     }
 
@@ -87,7 +92,9 @@ public class PetitionService {
                 setting.calculateTargetAgreementCount(),
                 now
         );
-        return PetitionResponse.from(petitionRepository.save(petition));
+        Petition saved = petitionRepository.save(petition);
+        events.publishEvent(new PetitionEmbeddingRefreshRequestedEvent(saved.getId()));
+        return PetitionResponse.from(saved);
     }
 
     @Transactional(readOnly = true)
@@ -139,6 +146,7 @@ public class PetitionService {
         validateWriter(petition, userId);
         validateEditable(petition);
         petition.update(request.title(), request.content());
+        events.publishEvent(new PetitionEmbeddingRefreshRequestedEvent(petition.getId()));
         return PetitionResponse.from(petition);
     }
 
