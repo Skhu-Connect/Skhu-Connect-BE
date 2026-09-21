@@ -43,7 +43,7 @@ public class PetitionSimilaritySearchLog extends BaseEntity {
     private int dimensions;
 
     @Lob
-    @Column(name = "query_embedding", nullable = false)
+    @Column(name = "query_embedding", nullable = false, columnDefinition = "BLOB")
     private byte[] queryEmbedding;
 
     @Column(name = "counted", nullable = false)
