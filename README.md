@@ -7,7 +7,7 @@
 성공회대학교 학생들이 익명으로 건의하고, 요청을 모아 학교의 답변을 확인하는 서비스입니다.
 이 저장소는 백엔드 API 기능 구현을 담당합니다.
 
-[학생 웹](https://petition-system-two.vercel.app) · [관리자 웹](https://petition-system-two.vercel.app/admin) · [App Store](https://apps.apple.com/kr/app/id6800192649) · [백엔드 저장소](https://github.com/Skhu-Connect/Skhu-Connect-BE)
+[스웨거 주소]([https://i1000u.hueeng.com/swagger-ui/index.html)
 
 ## 주요 기능
 
@@ -23,30 +23,12 @@
 
 | 구분 | 기술 |
 | --- | --- |
-| 웹 | React, Vite, React Router, Zustand, Tailwind CSS |
-| iOS | React Native, Expo, TypeScript, NativeWind, Firebase Cloud Messaging |
-| 배포 | 웹: Vercel / iOS: App Store |
+| 웹 | Java 17·SpringBoot·JPA·MySQL. JWT·BCrypt 인증|
 
-
-## 폴더 구성
-
-```text
-src/
-  pages/web/      학생 웹 화면
-  pages/admin/    관리자 웹 화면
-  components/    공통 UI와 웹·관리자 컴포넌트
-  api/           웹 API 연동
-  stores/        상태 관리
-  index.css      공통 스타일과 디자인 토큰
-ios/             iOS 앱과 모바일 API 연동
-docs/            API·관리자 기능 문서
-```
-
-웹은 개발 환경에서 백엔드를 직접 호출하고, Vercel 배포에서는 `/connect/*` 프록시를 사용합니다. 앱은 백엔드를 직접 호출합니다.
 
 ## 개발 담당
 
 | 담당 | 이름 |
 | --- | --- |
-| 프론트엔드 | 김석환 |
-| 백엔드 | 전천우 ([별도 저장소](https://github.com/Skhu-Connect/Skhu-Connect-BE)) |
+| 프론트엔드 | 김석환([별도 저장소](https://github.com/Skhu-Connect/Skhu-Connect-FE)) |
+| 백엔드 | 전천우  |
