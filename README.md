@@ -7,7 +7,7 @@
 성공회대학교 학생들이 익명으로 건의하고, 요청을 모아 학교의 답변을 확인하는 서비스입니다.
 이 저장소는 백엔드 API 기능 구현을 담당합니다.
 
-[스웨거 주소]([https://i1000u.hueeng.com/swagger-ui/index.html])
+([스웨거주소](https://i1000u.hueeng.com/swagger-ui/index.html)) 
 
 ## 주요 기능
 
