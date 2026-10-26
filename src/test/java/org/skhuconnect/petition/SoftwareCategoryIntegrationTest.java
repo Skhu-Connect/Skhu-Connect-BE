@@ -45,7 +45,7 @@ class SoftwareCategoryIntegrationTest {
     @BeforeEach
     void setUp() {
         String unique = UUID.randomUUID().toString().substring(0, 8);
-        software = departments.saveAndFlush(Department.create("SOFTWARE", "소프트웨어융합학부"));
+        software = departments.saveAndFlush(Department.create("SOFTWARE_CONVERGENCE", "소프트웨어융합학부"));
         other = departments.saveAndFlush(Department.create("OTHER" + unique, "다른 학부" + unique));
         user = users.saveAndFlush(User.create(unique + "@office.skhu.ac.kr", unique, "encoded", other));
         token = tokens.issue(user);
@@ -61,7 +61,7 @@ class SoftwareCategoryIntegrationTest {
 
         changeDepartment(software);
         mvc.perform(get("/connect/users/me").header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.departmentCode").value("SOFTWARE"));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.departmentCode").value("SOFTWARE_CONVERGENCE"));
         available(true);
         createSoftware().andExpect(status().isCreated())
                 .andExpect(jsonPath("$.category").value("SOFTWARE_CONVERGENCE"))

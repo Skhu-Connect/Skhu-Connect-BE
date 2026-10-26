@@ -1057,7 +1057,7 @@ ThresholdSetting 생성 시 `totalStudentCount`, `thresholdRate`, `minimumCount`
 - 모든 인증 학생이 모든 카테고리 청원에 동의할 수 있다.
 - 학교 전체 학생 수를 모든 카테고리의 기준 인원으로 사용한다.
 
-시범운영 확장: `SOFTWARE_CONVERGENCE`(소프트웨어융합학부)를 PetitionCategory에 추가한다. 이 카테고리의 `total_student_count`는 학교 전체가 아닌 학부 인원으로 설정하며 인원·비율·최소 인원을 소프트웨어 관리자가 관리한다. 새 설정 row가 없으면 비대위의 최초 임계치 PUT이 요청 값으로 생성한다. 이후 PUT은 수정한다. 기존 카테고리의 없는 설정은 404를 유지한다. 값은 실제 운영 담당자가 확정하며 임의 초기화하지 않는다. 기존 청원의 목표 동의 수는 변경하지 않는다. 새 카테고리 작성 권한은 users.department_id가 가리키는 departments.code=`SOFTWARE` 기준이다. 학부 정보는 회원가입과 마이페이지 변경에서 동일한 FK를 사용한다. 기존 카테고리 작성·전체 카테고리 조회·동의 정책은 유지한다.
+시범운영 확장: `SOFTWARE_CONVERGENCE`(소프트웨어융합학부)를 PetitionCategory에 추가한다. 이 카테고리의 `total_student_count`는 학교 전체가 아닌 학부 인원으로 설정하며 인원·비율·최소 인원을 소프트웨어 관리자가 관리한다. 새 설정 row가 없으면 비대위의 최초 임계치 PUT이 요청 값으로 생성한다. 이후 PUT은 수정한다. 기존 카테고리의 없는 설정은 404를 유지한다. 값은 실제 운영 담당자가 확정하며 임의 초기화하지 않는다. 기존 청원의 목표 동의 수는 변경하지 않는다. 새 카테고리 작성 권한은 users.department_id가 가리키는 departments.code=`SOFTWARE_CONVERGENCE` 기준이다. 학부 정보는 회원가입과 마이페이지 변경에서 동일한 FK를 사용한다. 기존 카테고리 작성·전체 카테고리 조회·동의 정책은 유지한다.
 - 기숙사생 여부와 학부 소속 여부는 MVP에서 검증하지 않는다.
 - 변경된 설정은 이후 생성되는 청원부터 적용한다.
 - 기존 청원의 `target_agreement_count`는 변경하지 않는다.
