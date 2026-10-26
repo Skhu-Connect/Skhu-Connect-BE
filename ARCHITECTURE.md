@@ -54,7 +54,7 @@ Controller는 HTTP만 처리하고 Service가 정책·트랜잭션을 담당한�
 
 관리자 시범운영 권한은 ADMIN_POLICY.md 1절을 따른다. 전체 카테고리 조회는 유지하며, 변경은 DB의 관리자 소속에 따라 총학생회(기존 카테고리)와 소프트웨어융합학부 비대위(해당 카테고리)로 분리한다. JWT의 기존 ADMIN 역할은 유지하고 Service에서 변경 대상 카테고리를 검사한다.
 
-소프트웨어융합학부 청원 카테고리는 `SOFTWARE_CONVERGENCE`다. 새 청원 작성은 현재 User.department의 code가 `SOFTWARE`인 사용자만 가능하다. 회원가입과 마이페이지 학부 변경은 동일한 users.department_id를 사용하며 작성 시 User 행 잠금 안에서 최신 학부를 확인한다. 학부 변경 정책과 기존 카테고리 작성·조회·동의·댓글 정책은 유지한다. 작성 가능 카테고리는 인증된 `GET /connect/petitions/categories`로 조회한다.
+소프트웨어융합학부 청원 카테고리는 `SOFTWARE_CONVERGENCE`다. 새 청원 작성은 현재 User.department의 code가 `SOFTWARE_CONVERGENCE`인 사용자만 가능하다. 회원가입과 마이페이지 학부 변경은 동일한 users.department_id를 사용하며 작성 시 User 행 잠금 안에서 최신 학부를 확인한다. 학부 변경 정책과 기존 카테고리 작성·조회·동의·댓글 정책은 유지한다. 작성 가능 카테고리는 인증된 `GET /connect/petitions/categories`로 조회한다.
 
 - 학교 이메일: `@office.skhu.ac.kr`
 - 이메일 인증 목적: `SIGN_UP`, `PASSWORD_RESET`, `LOGIN_ID_FIND`

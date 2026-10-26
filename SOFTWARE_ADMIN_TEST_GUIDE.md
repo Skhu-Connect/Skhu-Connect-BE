@@ -39,7 +39,7 @@
 | minimum_count | 최소 동의 인원 (1 이상) |
 | created_at, updated_at | 초기 설정 시각 |
 
-사용자 학부는 `GET /connect/departments`로 확인한다. 소프트웨어융합학부의 학과 코드는 기존 코드·테스트에서 사용하는 `SOFTWARE`다. 실제 로컬 데이터가 이 코드인지 확인해야 한다. Department 새 테이블이나 별도 사용자 학부 필드는 추가하지 않는다.
+사용자 학부는 `GET /connect/departments`로 확인한다. 소프트웨어융합학부의 학과 코드는 운영 공개 학과 API에서 확인한 `SOFTWARE_CONVERGENCE`다. 실제 로컬 데이터가 이 코드인지 확인해야 한다. Department 새 테이블이나 별도 사용자 학부 필드는 추가하지 않는다.
 
 ### 기존 DB enum 제약
 
@@ -55,8 +55,8 @@ Petition.category와 ThresholdSetting.category의 기존 `@Enumerated` + VARCHAR
 4. 카테고리를 교차해 청원·댓글 숨김/복구와 공식 답변 등록/수정을 호출한다. 담당 카테고리만 성공하고 나머지는 Problem Detail 403, title=`ADMIN_FORBIDDEN`이어야 한다. 공식 답변 등록은 기존처럼 UNDER_REVIEW 청원에서 가능하다.
 5. 비대위의 `PUT /connect/admin/threshold-settings/SOFTWARE_CONVERGENCE`로 최초 설정을 생성한 뒤 같은 PUT으로 수정한다. 담당 카테고리만 성공하고 변경 사유·관리자가 기록돼야 한다. 기존 청원의 targetAgreementCount는 유지돼야 한다.
 6. 비대위 토큰으로 모든 공지 변경 API를 호출하면 403이어야 한다. 신고 HIDE/기각/USER_LOGIN_BAN은 모두 담당 카테고리만 가능하다. 청원·댓글 신고 응답의 petitionCategory가 실제 소속 청원의 카테고리인지 확인한다.
-7. 일반 USER 토큰으로 `GET /connect/petitions/categories`를 호출한다. 현재 users.department_id의 학과 코드가 SOFTWARE일 때만 SOFTWARE_CONVERGENCE가 목록에 포함돼야 한다. 비로그인 요청은 401이다.
-8. 같은 USER 토큰으로 `PATCH /connect/users/me/department`를 호출해 SOFTWARE 학부로 변경하고 7번을 재조회한다. 재로그인 없이 새 카테고리가 포함돼야 한다. 다른 학부로 변경하면 다시 제외돼야 한다.
+7. 일반 USER 토큰으로 `GET /connect/petitions/categories`를 호출한다. 현재 users.department_id의 학과 코드가 SOFTWARE_CONVERGENCE일 때만 SOFTWARE_CONVERGENCE가 목록에 포함돼야 한다. 비로그인 요청은 401이다.
+8. 같은 USER 토큰으로 `PATCH /connect/users/me/department`를 호출해 SOFTWARE_CONVERGENCE 학부로 변경하고 7번을 재조회한다. 재로그인 없이 새 카테고리가 포함돼야 한다. 다른 학부로 변경하면 다시 제외돼야 한다.
 9. 다른 학부 사용자가 SOFTWARE_CONVERGENCE를 직접 지정해 청원을 등록하면 403이어야 한다. 소프트웨어 학부는 기존 쿨다운·검증·임계치 정책 안에서 등록할 수 있다. 다른 카테고리 작성·공개 조회·동의 정책은 유지한다.
 
 ## 5. 프런트 연결 범위
@@ -191,3 +191,8 @@ sudo를 통한 기존 서비스 환경파일 사용과 읽기 전용 스키마 �
 최신 원격 main의 README 디자인과 기존 안내는 보존하고 새 기능 설명을 덧붙였다. main의 기존 SSH 자동 배포 워크플로우를 사용한다. 비대위 계정은 새 권한 코드 배포 후 생성하며, 임계치는 비대위가 최초 PUT으로 입력한다. 관리자 화면은 같은 백엔드와 기존 API 경로를 사용하므로 별도 백엔드 URI는 필요 없다. 새 프런트 도메인 CORS는 주소를 받은 후 별도 추가한다.
 
 실제 배포 결과는 배포 완료 시점의 채팅 보고와 GitHub Actions 결과를 기준으로 확인한다.
+
+
+### 운영 확인 후 학과 코드 보완
+
+2026-10-26 운영 GET /connect/departments에서 소프트웨어융합학부의 실제 code가 SOFTWARE_CONVERGENCE임을 확인했다. 기존 로컬 fixture의 SOFTWARE 가정 대신 이 운영 코드를 사용하도록 Service·Swagger·통합 테스트를 맞췄다. 사용자 FK나 학과 데이터를 변경하지 않는다. 학부 변경 후 동일 토큰으로 작성 목록 포함·제외와 직접 등록 허용·차단을 같은 통합 테스트로 검증한다.
