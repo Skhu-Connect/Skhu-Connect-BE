@@ -113,7 +113,7 @@ public class PetitionService {
 
     private boolean isCategoryAvailable(User user, PetitionCategory category) {
         return category != PetitionCategory.SOFTWARE_CONVERGENCE
-                || "SOFTWARE".equals(user.getDepartment().getCode());
+                || "SOFTWARE_CONVERGENCE".equals(user.getDepartment().getCode());
     }
 
     @Transactional(readOnly = true)

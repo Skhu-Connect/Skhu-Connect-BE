@@ -35,7 +35,7 @@
 
 ## 소프트웨어융합학부 시범운영
 
-- `SOFTWARE_CONVERGENCE` 카테고리를 추가한다. 현재 학과 코드가 `SOFTWARE`인 학생만 이 카테고리를 작성할 수 있다.
+- `SOFTWARE_CONVERGENCE` 카테고리를 추가한다. 현재 학과 코드가 `SOFTWARE_CONVERGENCE`인 학생만 이 카테고리를 작성할 수 있다.
 - 회원가입과 마이페이지 학부 변경은 동일한 `users.department_id`를 사용한다. 변경 후 카테고리 목록 재조회 시 재로그인 없이 반영된다.
 - `GET /connect/petitions/categories`는 USER 인증이 필요한 작성 가능 카테고리 문자열 배열이다. 피드 조회·검색·필터는 전체 카테고리를 유지한다.
 - 관리자 DB 역할은 `STUDENT_COUNCIL`(기존 카테고리와 공지 관리), `EMERGENCY_COMMITTEE`(소프트웨어 카테고리 관리)로 구분한다. 전체 카테고리 조회는 양쪽 모두 가능하다. JWT 역할과 기존 로그인 API는 `ADMIN`을 유지한다.
