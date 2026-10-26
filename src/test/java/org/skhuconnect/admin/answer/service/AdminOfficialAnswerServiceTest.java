@@ -48,8 +48,8 @@ class AdminOfficialAnswerServiceTest {
         answers = mock(OfficialAnswerRepository.class);
         notifications = mock(NotificationEventService.class);
         service = new AdminOfficialAnswerService(admins, petitions, answers, notifications);
-        admin = mock(Admin.class);
-        when(admin.getId()).thenReturn(7L);
+        admin = Admin.create("admin", "encoded");
+        ReflectionTestUtils.setField(admin, "id", 7L);
         User writer = mock(User.class);
         when(writer.getId()).thenReturn(3L);
         petition = Petition.create(writer, PetitionCategory.FACILITY, "title", "content", 1, LocalDateTime.now());
@@ -103,8 +103,8 @@ class AdminOfficialAnswerServiceTest {
     void updateKeepsAnsweredStateAndDoesNotSendSecondNotification() {
         ReflectionTestUtils.setField(petition, "status", PetitionStatus.ANSWERED);
         OfficialAnswer answer = OfficialAnswer.create(petition, admin, "first", AnswerSource.OPERATION_TEAM);
-        Admin changedBy = mock(Admin.class);
-        when(changedBy.getId()).thenReturn(8L);
+        Admin changedBy = Admin.create("changed", "encoded");
+        ReflectionTestUtils.setField(changedBy, "id", 8L);
         when(admins.findById(8L)).thenReturn(Optional.of(changedBy));
         when(petitions.findVisibleByIdForUpdate(10L)).thenReturn(Optional.of(petition));
         when(answers.findByPetitionId(10L)).thenReturn(Optional.of(answer));

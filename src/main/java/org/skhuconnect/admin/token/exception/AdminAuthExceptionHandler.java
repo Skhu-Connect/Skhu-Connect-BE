@@ -6,7 +6,8 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@RestControllerAdvice(assignableTypes = AdminAuthController.class)
+@RestControllerAdvice(assignableTypes = {AdminAuthController.class,
+        org.skhuconnect.admin.controller.AdminManagementController.class})
 public class AdminAuthExceptionHandler {
 
     @ExceptionHandler(AdminAuthException.class)

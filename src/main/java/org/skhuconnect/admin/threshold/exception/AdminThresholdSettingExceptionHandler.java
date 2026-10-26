@@ -11,9 +11,12 @@ public class AdminThresholdSettingExceptionHandler {
 
     @ExceptionHandler(AdminThresholdSettingException.class)
     public ProblemDetail handle(AdminThresholdSettingException exception) {
-        ProblemDetail detail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
+        HttpStatus status = exception.getReason() == AdminThresholdSettingException.Reason.THRESHOLD_SETTING_ALREADY_EXISTS
+                ? HttpStatus.CONFLICT : HttpStatus.NOT_FOUND;
+        ProblemDetail detail = ProblemDetail.forStatus(status);
         detail.setTitle(switch (exception.getReason()) {
             case THRESHOLD_SETTING_NOT_FOUND -> "Threshold setting not found";
+            case THRESHOLD_SETTING_ALREADY_EXISTS -> "Threshold setting already exists";
             case ADMIN_NOT_FOUND -> "Administrator not found";
         });
         return detail;

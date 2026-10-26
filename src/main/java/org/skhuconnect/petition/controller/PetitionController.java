@@ -45,10 +45,19 @@ public class PetitionController {
         this.petitionService = petitionService;
     }
 
-    @Operation(summary = "청원 등록", description = "청원 등록 성공 시점부터 10분 후 다시 등록할 수 있습니다.")
+    @Operation(summary = "작성 가능한 청원 카테고리 조회",
+            description = "현재 저장된 학부를 기준으로 반환합니다. SOFTWARE_CONVERGENCE(소프트웨어융합학부)는 학과 코드 SOFTWARE 사용자에게만 제공됩니다.")
+    @GetMapping("/categories")
+    public java.util.List<PetitionCategory> findAvailableCategories(
+            @Parameter(hidden = true) @RequestAttribute("userId") Long userId) {
+        return petitionService.findAvailableCategories(userId);
+    }
+
+    @Operation(summary = "청원 등록", description = "청원 등록 성공 시점부터 10분 후 다시 등록할 수 있습니다. SOFTWARE_CONVERGENCE는 현재 학과 코드가 SOFTWARE인 사용자만 작성할 수 있습니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "청원 등록 성공"),
             @ApiResponse(responseCode = "400", description = "요청 형식 오류", content = @Content),
+            @ApiResponse(responseCode = "403", description = "현재 학부에서 작성할 수 없는 카테고리", content = @Content),
             @ApiResponse(responseCode = "404", description = "사용자 또는 임계치 설정 없음",
                     content = @Content),
             @ApiResponse(responseCode = "429",

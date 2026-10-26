@@ -313,6 +313,7 @@ admins
 | `id` | `BIGINT` | 불가 | PK, AUTO_INCREMENT | 관리자 식별자 |
 | `login_id` | `VARCHAR(50)` | 불가 | UNIQUE | 관리자 로그인 아이디 |
 | `password` | `VARCHAR(255)` | 불가 |  | BCrypt 암호화 비밀번호 |
+| `role` | `VARCHAR(30)` | 가능 |  | STUDENT_COUNCIL 또는 EMERGENCY_COMMITTEE, 기존 NULL 호환 |
 | `created_at` | `DATETIME(6)` | 불가 |  | 생성 시각 |
 | `updated_at` | `DATETIME(6)` | 불가 |  | 수정 시각 |
 
@@ -333,8 +334,9 @@ UNIQUE(login_id)
 ## 비즈니스 규칙
 
 - 관리자 공개 회원가입은 제공하지 않는다.
-- 모든 관리자는 동일한 `ADMIN` 권한을 가진다.
-- 관리자별 권한 차이와 카테고리 배정은 MVP에서 제외한다.
+- 관리자 JWT 역할은 모두 `ADMIN`을 유지하며, 변경 권한은 `admins.role`로 구분한다.
+- `role`은 nullable VARCHAR(30)이며 NULL 또는 `STUDENT_COUNCIL`은 총학생회, `EMERGENCY_COMMITTEE`는 소프트웨어융합학부 비대위다. 기존 계정의 NULL은 마이그레이션 전 총학생회로 해석하고 초기 데이터 작업에서 STUDENT_COUNCIL로 채운다. String으로 매핑해 enum CHECK 제약을 추가하지 않는다. 알 수 없는 값은 변경 권한을 부여하지 않는다.
+- 전체 글 조회는 양쪽 모두 가능하다. 총학생회는 기존 카테고리만, 소프트웨어 관리자는 소프트웨어융합학부만 변경한다. FK·UNIQUE·기존 데이터는 변경하지 않는다.
 - 관리자 비밀번호는 BCrypt 해시만 저장한다.
 
 ---
@@ -456,6 +458,7 @@ FACILITY
 DORMITORY
 LIBRARY
 DEPARTMENT
+SOFTWARE_CONVERGENCE
 ```
 
 ### PetitionStatus
@@ -1053,6 +1056,8 @@ ThresholdSetting 생성 시 `totalStudentCount`, `thresholdRate`, `minimumCount`
 
 - 모든 인증 학생이 모든 카테고리 청원에 동의할 수 있다.
 - 학교 전체 학생 수를 모든 카테고리의 기준 인원으로 사용한다.
+
+시범운영 확장: `SOFTWARE_CONVERGENCE`(소프트웨어융합학부)를 PetitionCategory에 추가한다. 이 카테고리의 `total_student_count`는 학교 전체가 아닌 학부 인원으로 설정하며 인원·비율·최소 인원을 소프트웨어 관리자가 관리한다. 새 설정 row가 없으면 비대위의 최초 임계치 PUT이 요청 값으로 생성한다. 이후 PUT은 수정한다. 기존 카테고리의 없는 설정은 404를 유지한다. 값은 실제 운영 담당자가 확정하며 임의 초기화하지 않는다. 기존 청원의 목표 동의 수는 변경하지 않는다. 새 카테고리 작성 권한은 users.department_id가 가리키는 departments.code=`SOFTWARE` 기준이다. 학부 정보는 회원가입과 마이페이지 변경에서 동일한 FK를 사용한다. 기존 카테고리 작성·전체 카테고리 조회·동의 정책은 유지한다.
 - 기숙사생 여부와 학부 소속 여부는 MVP에서 검증하지 않는다.
 - 변경된 설정은 이후 생성되는 청원부터 적용한다.
 - 기존 청원의 `target_agreement_count`는 변경하지 않는다.

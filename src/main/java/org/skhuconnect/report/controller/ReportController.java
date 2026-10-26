@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+@ApiResponse(responseCode = "403", description = "담당 카테고리의 관리자만 변경 가능", content = @Content)
 @Tag(name = "Reports", description = "청원·댓글 신고 API")
 @RestController
 @RequestMapping("/connect")

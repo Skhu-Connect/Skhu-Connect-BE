@@ -49,7 +49,7 @@ class ReportServiceTest {
     void setUp() {
         reports = mock(ReportRepository.class);
         admins = mock(AdminRepository.class);
-        admin = mock(Admin.class);
+        admin = Admin.create("admin", "encoded");
         notificationEvents = mock(NotificationEventService.class);
         service = new ReportService(
                 reports,
@@ -65,6 +65,7 @@ class ReportServiceTest {
     @Test
     void 삭제된_청원은_숨기지_않고_신고만_종결한다() {
         Petition petition = mock(Petition.class);
+        when(petition.getCategory()).thenReturn(org.skhuconnect.petition.entity.PetitionCategory.FACILITY);
         when(petition.isDeleted()).thenReturn(true);
         when(petition.getTitle()).thenReturn("신고당한 청원");
         when(petition.getContent()).thenReturn("작성자가 지운 원문");
@@ -83,6 +84,7 @@ class ReportServiceTest {
     @Test
     void 삭제된_댓글도_숨기지_않고_신고만_종결한다() {
         Petition petition = mock(Petition.class);
+        when(petition.getCategory()).thenReturn(org.skhuconnect.petition.entity.PetitionCategory.FACILITY);
         when(petition.getId()).thenReturn(42L);
         Comment comment = mock(Comment.class);
         when(comment.isDeleted()).thenReturn(true);
@@ -103,6 +105,7 @@ class ReportServiceTest {
     @Test
     void 살아있는_청원은_조치함_처리에서_숨겨진다() {
         Petition petition = mock(Petition.class);
+        when(petition.getCategory()).thenReturn(org.skhuconnect.petition.entity.PetitionCategory.FACILITY);
         Report report = petitionReport(petition);
 
         service.process(7L, 1L, actionTaken());
@@ -114,6 +117,7 @@ class ReportServiceTest {
     @Test
     void 로그인_금지_조치는_대상_작성자를_정지시키고_글은_숨기지_않는다() {
         Petition petition = mock(Petition.class);
+        when(petition.getCategory()).thenReturn(org.skhuconnect.petition.entity.PetitionCategory.FACILITY);
         User writer = mock(User.class);
         when(petition.getWriter()).thenReturn(writer);
         Report report = petitionReport(petition);
@@ -140,6 +144,7 @@ class ReportServiceTest {
     @Test
     void 신고_처리_결과는_신고자와_대상에게_알림으로_전달된다() {
         Petition petition = mock(Petition.class);
+        when(petition.getCategory()).thenReturn(org.skhuconnect.petition.entity.PetitionCategory.FACILITY);
         Report report = petitionReport(petition);
 
         service.process(7L, 1L, actionTaken());

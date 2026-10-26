@@ -6,6 +6,7 @@ import org.skhuconnect.admin.answer.entity.OfficialAnswer;
 import org.skhuconnect.admin.answer.exception.AdminOfficialAnswerException;
 import org.skhuconnect.admin.answer.repository.OfficialAnswerRepository;
 import org.skhuconnect.admin.entity.Admin;
+import org.skhuconnect.admin.service.AdminManagementPermission;
 import org.skhuconnect.admin.notificationlog.service.AdminNotificationLogService;
 import org.skhuconnect.admin.notificationlog.entity.*;
 import org.skhuconnect.admin.repository.AdminRepository;
@@ -41,6 +42,7 @@ public class AdminOfficialAnswerService {
     public OfficialAnswerResponse register(Long adminId, Long petitionId, OfficialAnswerRequest request) {
         Admin admin = findAdmin(adminId);
         Petition petition = findVisiblePetitionForUpdate(petitionId);
+        AdminManagementPermission.requireCategory(admin, petition.getCategory());
         if (officialAnswerRepository.findByPetitionId(petitionId).isPresent()) {
             throw error(AdminOfficialAnswerException.Reason.OFFICIAL_ANSWER_ALREADY_EXISTS);
         }
@@ -61,6 +63,7 @@ public class AdminOfficialAnswerService {
     public OfficialAnswerResponse update(Long adminId, Long petitionId, OfficialAnswerRequest request) {
         Admin admin = findAdmin(adminId);
         Petition petition = findVisiblePetitionForUpdate(petitionId);
+        AdminManagementPermission.requireCategory(admin, petition.getCategory());
         if (petition.getStatus() != PetitionStatus.ANSWERED) {
             throw error(AdminOfficialAnswerException.Reason.PETITION_NOT_ANSWERED);
         }
