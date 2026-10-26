@@ -3,6 +3,7 @@ package org.skhuconnect.report.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.skhuconnect.comment.entity.Comment;
 import org.skhuconnect.petition.entity.Petition;
+import org.skhuconnect.petition.entity.PetitionCategory;
 import org.skhuconnect.report.entity.Report;
 import org.skhuconnect.report.entity.ReportActionType;
 import org.skhuconnect.report.entity.ReportReasonType;
@@ -21,6 +22,8 @@ public record ReportResponse(
         ReportActionType actionType,
         @Schema(description = "신고 대상 청원 id. 댓글 신고면 그 댓글이 달린 청원 id")
         Long petitionId,
+        @Schema(description = "신고 대상 청원의 카테고리. 댓글 신고는 댓글이 속한 청원의 카테고리")
+        PetitionCategory petitionCategory,
         @Schema(description = "댓글 신고일 때만 채워진다")
         Long commentId,
         ReportReasonType reasonType,
@@ -41,20 +44,22 @@ public record ReportResponse(
         Petition petition = report.getPetition();
         Comment comment = report.getComment();
         Long petitionId = null;
+        PetitionCategory petitionCategory = null;
         String targetTitle = null;
         String targetContent = null;
         boolean targetDeleted = false;
         boolean targetHidden = false;
         if (petition != null) {
             petitionId = petition.getId();
+            petitionCategory = petition.getCategory();
             targetTitle = petition.getTitle();
             targetContent = petition.getContent();
             targetDeleted = petition.isDeleted();
             targetHidden = petition.isHidden();
         } else if (comment != null) {
-            // 댓글 신고는 report.petition 이 null 이다. 소속 청원 id 는 프록시에서 꺼내므로
-            // 추가 쿼리가 나가지 않는다(식별자 접근은 프록시를 초기화하지 않는다).
+            // 댓글 신고는 report.petition이 null이므로 댓글이 속한 청원을 기준으로 반환한다.
             petitionId = comment.getPetition().getId();
+            petitionCategory = comment.getPetition().getCategory();
             targetContent = comment.getContent();
             targetDeleted = comment.isDeleted();
             targetHidden = comment.isHidden();
@@ -65,6 +70,7 @@ public record ReportResponse(
                 report.getTargetType(),
                 report.getActionType(),
                 petitionId,
+                petitionCategory,
                 comment == null ? null : comment.getId(),
                 report.getReasonType(),
                 report.getReasonDetail(),

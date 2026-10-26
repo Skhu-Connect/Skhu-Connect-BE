@@ -9,6 +9,7 @@ import org.skhuconnect.petition.dto.response.PetitionPageResponse;
 import org.skhuconnect.petition.dto.response.PetitionQueryResponse;
 import org.skhuconnect.petition.dto.response.PetitionResponse;
 import org.skhuconnect.petition.entity.Petition;
+import org.skhuconnect.petition.entity.PetitionCategory;
 import org.skhuconnect.petition.exception.PetitionException;
 import org.skhuconnect.petition.exception.PetitionException.Reason;
 import org.skhuconnect.petition.repository.PetitionRepository;
@@ -30,6 +31,8 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Arrays;
+import java.util.List;
 
 @Service
 public class PetitionService {
@@ -69,6 +72,9 @@ public class PetitionService {
     public PetitionResponse create(Long userId, PetitionCreateRequest request) {
         User writer = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new PetitionException(Reason.USER_NOT_FOUND));
+        if (!isCategoryAvailable(writer, request.category())) {
+            throw new PetitionException(Reason.PETITION_CATEGORY_FORBIDDEN);
+        }
         LocalDateTime now = LocalDateTime.now(clock);
         petitionRepository.findLatestCreatedAtByWriterId(userId)
                 .map(createdAt -> createdAt.plus(CREATE_COOLDOWN))
@@ -95,6 +101,19 @@ public class PetitionService {
         Petition saved = petitionRepository.save(petition);
         events.publishEvent(new PetitionEmbeddingRefreshRequestedEvent(saved.getId()));
         return PetitionResponse.from(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PetitionCategory> findAvailableCategories(Long userId) {
+        User user = userRepository.findByIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new PetitionException(Reason.USER_NOT_FOUND));
+        return Arrays.stream(PetitionCategory.values())
+                .filter(category -> isCategoryAvailable(user, category)).toList();
+    }
+
+    private boolean isCategoryAvailable(User user, PetitionCategory category) {
+        return category != PetitionCategory.SOFTWARE_CONVERGENCE
+                || "SOFTWARE".equals(user.getDepartment().getCode());
     }
 
     @Transactional(readOnly = true)

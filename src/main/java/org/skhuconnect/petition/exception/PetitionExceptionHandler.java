@@ -18,7 +18,7 @@ public class PetitionExceptionHandler {
         HttpStatus status = switch (exception.getReason()) {
             case USER_NOT_FOUND, THRESHOLD_SETTING_NOT_FOUND, PETITION_NOT_FOUND ->
                     HttpStatus.NOT_FOUND;
-            case PETITION_FORBIDDEN -> HttpStatus.FORBIDDEN;
+            case PETITION_FORBIDDEN, PETITION_CATEGORY_FORBIDDEN -> HttpStatus.FORBIDDEN;
             case PETITION_NOT_EDITABLE -> HttpStatus.CONFLICT;
             case PETITION_CREATE_COOLDOWN -> HttpStatus.TOO_MANY_REQUESTS;
             case INVALID_SORT, INVALID_PAGE -> HttpStatus.BAD_REQUEST;
@@ -29,6 +29,7 @@ public class PetitionExceptionHandler {
             case THRESHOLD_SETTING_NOT_FOUND -> "Threshold setting not found";
             case PETITION_NOT_FOUND -> "Petition not found";
             case PETITION_FORBIDDEN -> "Petition access forbidden";
+            case PETITION_CATEGORY_FORBIDDEN -> "Petition category is not available for your department";
             case PETITION_NOT_EDITABLE -> "Petition is not editable";
             case PETITION_CREATE_COOLDOWN -> "Petition creation cooldown is active";
             case INVALID_SORT -> "Invalid petition sort property";

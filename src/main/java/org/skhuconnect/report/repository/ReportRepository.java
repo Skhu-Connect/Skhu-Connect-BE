@@ -8,14 +8,14 @@ public interface ReportRepository extends JpaRepository<Report,Long>{
  long countByStatus(ReportStatus status);
  boolean existsByReporterIdAndPetitionId(Long reporterId,Long petitionId);
  boolean existsByReporterIdAndCommentId(Long reporterId,Long commentId);
- @EntityGraph(attributePaths={"reporter","petition","comment","processedByAdmin"})
+ @EntityGraph(attributePaths={"reporter","petition","comment","comment.petition","processedByAdmin"})
  Page<Report> findAll(Pageable pageable);
- @EntityGraph(attributePaths={"reporter","petition","comment","processedByAdmin"})
+ @EntityGraph(attributePaths={"reporter","petition","comment","comment.petition","processedByAdmin"})
  Page<Report> findByStatus(ReportStatus status,Pageable pageable);
- @EntityGraph(attributePaths={"reporter","petition","comment","processedByAdmin"})
+ @EntityGraph(attributePaths={"reporter","petition","comment","comment.petition","processedByAdmin"})
  Page<Report> findByTargetType(ReportTargetType type,Pageable pageable);
- @EntityGraph(attributePaths={"reporter","petition","comment","processedByAdmin"})
+ @EntityGraph(attributePaths={"reporter","petition","comment","comment.petition","processedByAdmin"})
  Page<Report> findByStatusAndTargetType(ReportStatus status,ReportTargetType type,Pageable pageable);
- @EntityGraph(attributePaths={"reporter","petition","comment","processedByAdmin"})
+ @EntityGraph(attributePaths={"reporter","petition","comment","comment.petition","processedByAdmin"})
  Optional<Report> findById(Long id);
 }

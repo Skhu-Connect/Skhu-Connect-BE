@@ -6,6 +6,7 @@ import org.skhuconnect.admin.content.dto.AdminPageResponse;
 import org.skhuconnect.admin.content.dto.AdminPetitionResponse;
 import org.skhuconnect.admin.content.exception.AdminContentException;
 import org.skhuconnect.admin.entity.Admin;
+import org.skhuconnect.admin.service.AdminManagementPermission;
 import org.skhuconnect.admin.repository.AdminRepository;
 import org.skhuconnect.admin.notificationlog.service.AdminNotificationLogService;
 import org.skhuconnect.admin.notificationlog.entity.*;
@@ -65,6 +66,7 @@ public class AdminContentService {
             Long adminId, Long petitionId, AdminContentHideRequest request) {
         Petition petition = findPetition(petitionId);
         Admin admin = findAdmin(adminId);
+        AdminManagementPermission.requireCategory(admin, petition.getCategory());
         petition.hide(request.hiddenReason(), admin, LocalDateTime.now(clock));
         if (notificationLogs != null) notificationLogs.record(NotificationLogType.PETITION_HIDDEN, admin, NotificationLogTargetType.PETITION, petitionId, "Petition hidden: " + request.hiddenReason());
         return AdminPetitionResponse.from(petition);
@@ -73,6 +75,7 @@ public class AdminContentService {
     @Transactional
     public AdminPetitionResponse restorePetition(Long adminId, Long petitionId) {
         Petition petition = findPetition(petitionId);
+        AdminManagementPermission.requireCategory(findAdmin(adminId), petition.getCategory());
         petition.restore();
         if (notificationLogs != null) notificationLogs.record(NotificationLogType.PETITION_RESTORED, findAdmin(adminId), NotificationLogTargetType.PETITION, petitionId, "Petition restored");
         return AdminPetitionResponse.from(petition);
@@ -83,6 +86,7 @@ public class AdminContentService {
             Long adminId, Long petitionId, Long commentId, AdminContentHideRequest request) {
         Comment comment = findComment(petitionId, commentId);
         Admin admin = findAdmin(adminId);
+        AdminManagementPermission.requireCategory(admin, comment.getPetition().getCategory());
         comment.hide(request.hiddenReason(), admin, LocalDateTime.now(clock));
         if (notificationLogs != null) notificationLogs.record(NotificationLogType.COMMENT_HIDDEN, admin, NotificationLogTargetType.COMMENT, commentId, "Comment hidden: " + request.hiddenReason());
         return AdminCommentResponse.from(comment);
@@ -91,6 +95,7 @@ public class AdminContentService {
     @Transactional
     public AdminCommentResponse restoreComment(Long adminId, Long petitionId, Long commentId) {
         Comment comment = findComment(petitionId, commentId);
+        AdminManagementPermission.requireCategory(findAdmin(adminId), comment.getPetition().getCategory());
         comment.restore();
         if (notificationLogs != null) notificationLogs.record(NotificationLogType.COMMENT_RESTORED, findAdmin(adminId), NotificationLogTargetType.COMMENT, commentId, "Comment restored");
         return AdminCommentResponse.from(comment);

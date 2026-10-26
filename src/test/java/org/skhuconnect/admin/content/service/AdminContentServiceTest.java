@@ -40,8 +40,8 @@ class AdminContentServiceTest {
         comments = mock(CommentRepository.class);
         service = new AdminContentService(admins, petitions, comments,
                 Clock.fixed(Instant.parse("2030-01-01T00:00:00Z"), ZoneOffset.UTC));
-        admin = mock(Admin.class);
-        when(admin.getId()).thenReturn(7L);
+        admin = Admin.create("admin", "encoded");
+        ReflectionTestUtils.setField(admin, "id", 7L);
 
         User writer = mock(User.class);
         when(writer.getId()).thenReturn(3L);

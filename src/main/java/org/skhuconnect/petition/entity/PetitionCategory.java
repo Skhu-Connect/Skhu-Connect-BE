@@ -5,5 +5,6 @@ public enum PetitionCategory {
     FACILITY,
     DORMITORY,
     LIBRARY,
-    DEPARTMENT
+    DEPARTMENT,
+    SOFTWARE_CONVERGENCE
 }
