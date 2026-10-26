@@ -18,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
 
 class AdminThresholdSettingServiceTest {
 
@@ -34,7 +35,7 @@ class AdminThresholdSettingServiceTest {
         service = new AdminThresholdSettingService(settings, admins);
         setting = ThresholdSetting.create(PetitionCategory.FACILITY, 1000,
                 new BigDecimal("0.0100"), 5);
-        admin = mock(Admin.class);
+        admin = Admin.create("admin", "encoded");
     }
 
     @Test
@@ -70,5 +71,31 @@ class AdminThresholdSettingServiceTest {
                         new BigDecimal("0.0100"), 5, "reason")))
                 .extracting("reason")
                 .isEqualTo(AdminThresholdSettingException.Reason.ADMIN_NOT_FOUND);
+    }
+
+    @Test
+    void concurrentInitialCategoryUniqueViolationIsReportedAsConflict() {
+        when(admins.findById(7L)).thenReturn(Optional.of(Admin.createEmergencyCommittee("software", "encoded")));
+        org.hibernate.exception.ConstraintViolationException constraint = mock(org.hibernate.exception.ConstraintViolationException.class);
+        when(constraint.getConstraintName()).thenReturn("PUBLIC.UX_THRESHOLD_SETTINGS_CATEGORY_INDEX_1");
+        when(settings.saveAndFlush(any())).thenThrow(
+                new org.springframework.dao.DataIntegrityViolationException("duplicate", constraint));
+        assertThatThrownBy(() -> service.update(7L, PetitionCategory.SOFTWARE_CONVERGENCE,
+                new AdminThresholdSettingUpdateRequest(100, new BigDecimal("0.05"), 5, "initial")))
+                .isInstanceOf(AdminThresholdSettingException.class)
+                .extracting("reason")
+                .isEqualTo(AdminThresholdSettingException.Reason.THRESHOLD_SETTING_ALREADY_EXISTS);
+    }
+
+    @Test
+    void schemaCheckViolationIsNotMistakenForConcurrentInitialCreation() {
+        when(admins.findById(7L)).thenReturn(Optional.of(Admin.createEmergencyCommittee("software", "encoded")));
+        org.hibernate.exception.ConstraintViolationException constraint = mock(org.hibernate.exception.ConstraintViolationException.class);
+        when(constraint.getConstraintName()).thenReturn("threshold_settings_chk_1");
+        var failure = new org.springframework.dao.DataIntegrityViolationException("check", constraint);
+        when(settings.saveAndFlush(any())).thenThrow(failure);
+        assertThatThrownBy(() -> service.update(7L, PetitionCategory.SOFTWARE_CONVERGENCE,
+                new AdminThresholdSettingUpdateRequest(100, new BigDecimal("0.05"), 5, "initial")))
+                .isSameAs(failure);
     }
 }

@@ -1,6 +1,7 @@
 package org.skhuconnect.notice.service;
 
 import org.skhuconnect.admin.entity.Admin;
+import org.skhuconnect.admin.service.AdminManagementPermission;
 import org.skhuconnect.admin.notificationlog.entity.NotificationLogTargetType;
 import org.skhuconnect.admin.notificationlog.entity.NotificationLogType;
 import org.skhuconnect.admin.notificationlog.service.AdminNotificationLogService;
@@ -55,6 +56,7 @@ public class NoticeService {
     @Transactional
     public NoticeResponse create(Long adminId, NoticeCreateRequest request) {
         Admin admin = admins.findById(adminId).orElseThrow();
+        AdminManagementPermission.requireStudentCouncil(admin);
         return NoticeResponse.from(notices.save(Notice.create(
                 admin,
                 request.title(),
@@ -62,7 +64,8 @@ public class NoticeService {
     }
 
     @Transactional
-    public NoticeResponse update(Long id, NoticeCreateRequest request) {
+    public NoticeResponse update(Long adminId, Long id, NoticeCreateRequest request) {
+        AdminManagementPermission.requireStudentCouncil(admins.findById(adminId).orElseThrow());
         Notice notice = notices.findById(id).orElseThrow();
         notice.update(request.title(), request.content());
         return NoticeResponse.from(notice);
@@ -70,6 +73,7 @@ public class NoticeService {
 
     @Transactional
     public NoticeResponse publish(Long adminId, Long id) {
+        AdminManagementPermission.requireStudentCouncil(admins.findById(adminId).orElseThrow());
         Notice notice = notices.findById(id).orElseThrow();
         if (notice.publish()) {
             events.onNoticePublished(notice.getId(), notice.getTitle(), users.findByDeletedFalse());
@@ -81,14 +85,16 @@ public class NoticeService {
     }
 
     @Transactional
-    public NoticeResponse hide(Long id) {
+    public NoticeResponse hide(Long adminId, Long id) {
+        AdminManagementPermission.requireStudentCouncil(admins.findById(adminId).orElseThrow());
         Notice notice = notices.findById(id).orElseThrow();
         notice.hide();
         return NoticeResponse.from(notice);
     }
 
     @Transactional
-    public NoticeResponse republish(Long id) {
+    public NoticeResponse republish(Long adminId, Long id) {
+        AdminManagementPermission.requireStudentCouncil(admins.findById(adminId).orElseThrow());
         Notice notice = notices.findById(id).orElseThrow();
         notice.publish();
         return NoticeResponse.from(notice);

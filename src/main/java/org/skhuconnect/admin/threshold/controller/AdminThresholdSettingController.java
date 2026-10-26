@@ -20,7 +20,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@Tag(name = "Admin Threshold Settings", description = "愿由ъ옄 ?꾧퀎移??ㅼ젙 API")
+@ApiResponse(responseCode = "403", description = "담당 카테고리의 관리자만 변경 가능", content = @Content)
+@Tag(name = "Admin Threshold Settings", description = "관리자 임계치 설정 API")
 @RestController
 @RequestMapping("/connect/admin/threshold-settings")
 public class AdminThresholdSettingController {
@@ -38,11 +39,12 @@ public class AdminThresholdSettingController {
         return service.findAll();
     }
 
-    @Operation(summary = "관리자 임계치 설정 수정")
+    @Operation(summary = "관리자 임계치 설정 수정", description = "SOFTWARE_CONVERGENCE는 최초 PUT 시 설정 행이 없으면 비대위가 전달한 값으로 생성합니다. 이후에는 기존처럼 수정합니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Setting updated"),
             @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content),
-            @ApiResponse(responseCode = "404", description = "Setting or administrator not found", content = @Content)
+            @ApiResponse(responseCode = "404", description = "Setting or administrator not found", content = @Content),
+            @ApiResponse(responseCode = "409", description = "동시 최초 생성 충돌. 다시 조회한 후 PUT으로 수정", content = @Content)
     })
     @PutMapping("/{category}")
     public AdminThresholdSettingResponse update(

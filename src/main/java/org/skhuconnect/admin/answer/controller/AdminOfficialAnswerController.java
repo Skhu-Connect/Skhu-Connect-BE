@@ -18,7 +18,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "Admin Official Answer", description = "愿由ъ옄 怨듭떇 ?듬? API")
+@ApiResponse(responseCode = "403", description = "담당 카테고리의 관리자만 변경 가능", content = @Content)
+@Tag(name = "Admin Official Answer", description = "관리자 공식 답변 API")
 @RestController
 @RequestMapping("/connect/admin/petitions/{petitionId}/answer")
 public class AdminOfficialAnswerController {
